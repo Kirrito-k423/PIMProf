@@ -265,10 +265,23 @@ public:
     {
         out << "head = " << get_id(_head) << ", "
             << "count = " << _count << " | ";
+        #if TSJ > 0
+        std::cerr << "[TSJ-DEBUG]:" 
+                    << "head = " << std::dec << get_id(_head) << ", "
+                    << "count = " << std::dec << _count << " | "
+                    << "_set.size() = " << std::dec << _set.size() 
+                    << std::endl;
+        #endif
         for (auto it = _set.begin(); it != _set.end(); ++it)
         {
+            #if TSJ > 0
+            std::cerr  << &*it << "  "<< *it << "  "<< get_id(*it) << std::endl;
+            #endif
             out << get_id(*it) << " ";
         }
+        #if TSJ > 0
+        std::cerr << std::endl;
+        #endif
         out << std::endl;
         return out;
     }
@@ -334,7 +347,9 @@ public:
             return;
 
         // seg->print(std::cout);
-
+        // #if TSJ > 0
+        // std::cerr << "[TSJ-DEBUG]:UpdateTrie seg->_set.size()" << seg->_set.size() << std::endl;
+        // #endif
         TrieNode<Ty> *curNode = root;
         for (auto cur : seg->_set)
         {
@@ -374,7 +389,7 @@ public:
         delete root;
     }
 
-    void ExportSegment(DataReuseSegment<Ty> *seg, TrieNode<Ty> *leaf)
+  void ExportSegment(DataReuseSegment<Ty> *seg, TrieNode<Ty> *leaf)
     {
         assert(leaf->_isLeaf);
         seg->setHead(leaf->_cur);
@@ -383,6 +398,54 @@ public:
         TrieNode<Ty> *temp = leaf;
         while (temp->_parent != NULL)
         {
+            seg->insert(temp->_cur);
+            temp = temp->_parent;
+        }
+    }
+
+
+    void ExportSegment(DataReuseSegment<Ty> *seg, TrieNode<Ty> *leaf, BBLID (*get_id)(Ty))
+    {
+        assert(leaf->_isLeaf);
+        seg->setHead(leaf->_cur);
+        seg->setCount(leaf->_count);
+
+
+        #if TSJ > 0
+        // Providing a seed value
+        srand((unsigned) time(NULL));
+    
+        // Get a random number
+        int random = rand();
+        // To do: multiple progress RANDOM support 
+        // sleep(1);
+
+        UUID bblhash = leaf->_cur->bblhash;
+        std::cerr << "[TSJ-DEBUG]:" << std::dec<< random << 
+                    " leaf count:" << std::dec<< leaf->_count <<
+                    "  leaf bblid:" << std::dec<< get_id(leaf->_cur) <<
+                    "     bblhash:"
+                    << "  " << std::hex
+                    << std::setfill('0') << std::setw(16) << bblhash.first
+                    << "  "
+                    << std::setfill('0') << std::setw(16) << bblhash.second
+                    << std::endl;
+        #endif
+        TrieNode<Ty> *temp = leaf;
+        while (temp->_parent != NULL)
+        {
+            #if TSJ > 0
+            UUID bblhash = temp->_cur->bblhash;
+            std::cerr << "  [TSJ-DEBUG]:" << std::dec<< random << 
+                        " temp count:" << std::dec<< temp->_count <<
+                        "  temp bblid:" << std::dec<< get_id(temp->_cur) <<
+                        "      bblhash:"
+                        << "  " << std::hex
+                        << std::setfill('0') << std::setw(16) << bblhash.first
+                        << "  "
+                        << std::setfill('0') << std::setw(16) << bblhash.second
+                        << std::endl;
+            #endif
             seg->insert(temp->_cur);
             temp = temp->_parent;
         }
@@ -398,6 +461,7 @@ public:
     // BBLID get_id(Ty elem);
     void PrintDotGraphHelper(std::ostream &out, TrieNode<Ty> *root, int parent, int &count, BBLID (*get_id)(Ty))
     {
+        out << std::endl;
         BBLID cur = get_id(root->_cur);
         if (root->_isLeaf)
         {
@@ -440,7 +504,7 @@ public:
         for (auto it : _leaves)
         {
             DataReuseSegment<Ty> seg;
-            ExportSegment(&seg, it);
+            ExportSegment(&seg, it, get_id);
             seg.print(out, get_id);
         }
         return out;

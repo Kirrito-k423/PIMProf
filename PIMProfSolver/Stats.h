@@ -405,6 +405,20 @@ public:
         m_bbl_data_reuse->PrintAllSegments(ofs, RunStats::_get_id);
     }
 
+    void PrintAllDotGraph(std::ostream &ofs)
+    {
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "DotGraph - Thread " << tid << std::endl;
+        m_bbl_data_reuse->PrintDotGraph(ofs, RunStats::_get_id);
+    }
+
+    void PrintAllBBLOccurrence(std::ostream &ofs)
+    {
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "BBLOccurrence - Thread " << tid << std::endl;
+        m_bbl_data_reuse->PrintBBLOccurrence(ofs, RunStats::_get_id);
+    }
+
     void PrintBBLSwitchCount(std::ostream &ofs)
     {
         ofs << HORIZONTAL_LINE << std::endl;
