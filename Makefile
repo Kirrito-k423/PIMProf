@@ -7,8 +7,8 @@ all:
 
 debug:
 	mkdir -p $(DEBUG_DIR)
-	cd $(DEBUG_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug ..
-	make -j -C $(DEBUG_DIR)
+	cd $(DEBUG_DIR) && cmake -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=Debug ..
+	make VERBOSE=1 TSJ=1 -j -C $(DEBUG_DIR)
 
 clean:
 	rm -rf $(BUILD_DIR) ${DEBUG_DIR}

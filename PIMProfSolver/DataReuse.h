@@ -410,7 +410,7 @@ public:
         seg->setHead(leaf->_cur);
         seg->setCount(leaf->_count);
 
-
+        std::cout << "  leaf bblid:" << std::dec<< get_id(leaf->_cur) << std::endl;
         #if TSJ > 0
         // Providing a seed value
         srand((unsigned) time(NULL));
@@ -524,7 +524,7 @@ public:
 
             for (auto elem : seg) {
                 BBLID bblid = get_id(elem);
-                if (occurrence.size() <= bblid) {
+                if ((long)occurrence.size() <= bblid) {
                     occurrence.resize(bblid + 1);
                     total_occurrence.resize(bblid + 1);
                 }
@@ -541,7 +541,7 @@ public:
             }
         }
 
-        for (BBLID i = 0; i < total_occurrence.size(); ++i) {
+        for (BBLID i = 0; i < (long)total_occurrence.size(); ++i) {
             if (total_occurrence[i] > 0) {
                 std::sort(occurrence[i].begin(), occurrence[i].end(),
                     [](std::pair<int, int> lhs, std::pair<int, int> rhs) { return lhs.second > rhs.second; });
