@@ -259,6 +259,13 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
+        PrintSCAStats(ofs, 0);
+        PrintSCAStats(ofs, 50);
+        PrintSCAStats(ofs, 100);
+        PrintSCAStats(ofs, 500);
+        PrintSCAStats(ofs, 1000);
+        PrintSCAStats(ofs, 5000);
+        PrintSCAStats(ofs, 10000);
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -398,6 +405,53 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 
     ofs << "MPKI offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
 
+    return decision;
+}
+
+
+DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold)
+{
+    const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
+    DECISION decision;
+    uint64_t pim_total_instr = 0;
+    for (auto it = sorted[PIM].begin(); it != sorted[PIM].end(); ++it) {
+        pim_total_instr += (*it)->instruction_count;
+    }
+
+    uint64_t instr_threshold = pim_total_instr * 0.01;
+    
+    for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
+        auto *cpustats = sorted[CPU][i];
+        auto *pimstats = sorted[PIM][i];
+
+        double instr = pimstats->instruction_count;
+        double mem = pimstats->memory_access;
+        double mpki = mem / instr * 1000.0;
+        int para = pimstats->parallelism();
+
+        // deal with the part that is not inside any BBL
+        if (cpustats->bblhash == GLOBAL_BBLHASH) {
+            decision.push_back(CostSite::CPU);
+            continue;
+        }
+
+        if (mpki > sca_mpki_threshold && para > _parallelism_threshold && instr > instr_threshold) {
+            std::cout << para << std::endl;
+            decision.push_back(CostSite::PIM);
+        }
+        else {
+            decision.push_back(CostSite::CPU);
+        }
+    }
+
+    COST reuse_cost = ReuseCost(decision, _bbl_data_reuse.getRoot());
+    COST switch_cost = SwitchCost(decision, _bbl_switch_count);
+    auto elapsed_time = ElapsedTime(decision);
+    COST total_time = reuse_cost + switch_cost + elapsed_time.first + elapsed_time.second;
+    assert(total_time == Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count));
+
+    ofs << "SCA offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
+    ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold << std::endl;
     return decision;
 }
 
