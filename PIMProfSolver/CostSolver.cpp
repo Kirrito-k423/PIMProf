@@ -259,13 +259,11 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
-        PrintSCAStats(ofs, 0);
-        PrintSCAStats(ofs, 50);
-        PrintSCAStats(ofs, 100);
-        PrintSCAStats(ofs, 500);
-        PrintSCAStats(ofs, 1000);
-        PrintSCAStats(ofs, 5000);
-        PrintSCAStats(ofs, 10000);
+        for (int i = 0; i < 100 ; i+=10){
+            for (float j = 0; j < 0.02 ; j+=0.002){
+                PrintSCAStats(ofs, i, j);
+            }
+        }
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -409,7 +407,7 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 }
 
 
-DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold)
+DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, float instr_threshold_percentage)
 {
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     DECISION decision;
@@ -418,7 +416,7 @@ DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold)
         pim_total_instr += (*it)->instruction_count;
     }
 
-    uint64_t instr_threshold = pim_total_instr * 0.01;
+    uint64_t instr_threshold = pim_total_instr * instr_threshold_percentage;
     
     for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
         auto *cpustats = sorted[CPU][i];
