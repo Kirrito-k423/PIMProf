@@ -410,7 +410,7 @@ public:
         seg->setHead(leaf->_cur);
         seg->setCount(leaf->_count);
 
-        // std::cout << "  leaf bblid:" << std::dec<< get_id(leaf->_cur) << std::endl;
+        std::cout << "  leaf bblid:" << std::dec<< get_id(leaf->_cur) << std::endl;
         #if TSJ > 0
         // Providing a seed value
         srand((unsigned) time(NULL));
