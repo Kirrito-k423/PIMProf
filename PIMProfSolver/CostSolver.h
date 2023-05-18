@@ -209,7 +209,7 @@ class CostSolver {
     COST PermuteDecision(DECISION &decision, const std::vector<BBLID> &cur_batch, const BBLIDTrieNode *partial_root);
 
     DECISION PrintMPKIStats(std::ostream &ofs);
-    DECISION PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, float instr_threshold_percentage);
+    DECISION PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
     DECISION PrintReuseStats(std::ostream &ofs);
     DECISION PrintGreedyStats(std::ostream &ofs);
     void PrintDisjointSets(std::ostream &ofs);

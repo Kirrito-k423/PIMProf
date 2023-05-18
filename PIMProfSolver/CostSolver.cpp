@@ -260,8 +260,10 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
         for (int i = 0; i < 100 ; i+=10){
-            for (float j = 0; j < 0.02 ; j+=0.002){
-                PrintSCAStats(ofs, i, j);
+            for (int k = 0; k < 10 ; k+=1){
+                for (float j = 0; j < 0.02 ; j+=0.002){
+                    PrintSCAStats(ofs, i, k, j);
+                }
             }
         }
     }
@@ -407,7 +409,10 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 }
 
 
-DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, float instr_threshold_percentage)
+DECISION CostSolver::PrintSCAStats(std::ostream &ofs, \
+                                    int sca_mpki_threshold, \
+                                    int sca_parallelism_threshold, 
+                                    float instr_threshold_percentage)
 {
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     DECISION decision;
@@ -433,7 +438,7 @@ DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, fl
             continue;
         }
 
-        if (mpki > sca_mpki_threshold && para > _parallelism_threshold && instr > instr_threshold) {
+        if (mpki >= sca_mpki_threshold && para > sca_parallelism_threshold && instr >= instr_threshold) {
             std::cout << para << std::endl;
             decision.push_back(CostSite::PIM);
         }
@@ -449,7 +454,10 @@ DECISION CostSolver::PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, fl
     assert(total_time == Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count));
 
     ofs << "SCA offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
-    ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold << std::endl;
+    ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold \
+        << " sca_parallelism_threshold: " << sca_parallelism_threshold \
+        << " instr_threshold_percentage: " << instr_threshold_percentage \
+        << std::endl;
     return decision;
 }
 
