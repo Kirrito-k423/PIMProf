@@ -119,6 +119,7 @@ inline void SortStatsMap(UUIDHashMap<ThreadRunStats *> &statsmap, std::vector<Th
         [](ThreadRunStats *lhs, ThreadRunStats *rhs) { return lhs->bblhash < rhs->bblhash; });
 }
 
+
 class CostSolver {
   public:
     typedef DataReuse<ThreadRunStats *> FuncDataReuse;
@@ -128,6 +129,36 @@ class CostSolver {
     typedef DataReuse<BBLID> BBLIDDataReuse;
     typedef DataReuseSegment<BBLID> BBLIDDataReuseSegment;
     typedef TrieNode<BBLID> BBLIDTrieNode;
+    struct bestSCAResult{
+        COST total_time;
+        std::pair<COST, COST> elapsed_time;
+        COST reuse_cost;
+        COST switch_cost;
+        int sca_mpki_threshold;
+        int sca_parallelism_threshold;
+        float instr_threshold_percentage;
+        bestSCAResult(COST time): total_time(time){}
+        bestSCAResult(COST time, std::pair<COST, COST> elapsed_time, \
+                    COST reuse_cost,
+                    COST switch_cost,
+                    int sca_mpki_threshold,
+                    int sca_parallelism_threshold,
+                    float instr_threshold_percentage): total_time(time), elapsed_time(elapsed_time), \
+                    reuse_cost(reuse_cost), switch_cost(switch_cost), sca_mpki_threshold(sca_mpki_threshold),\
+                    sca_parallelism_threshold(sca_parallelism_threshold),instr_threshold_percentage(instr_threshold_percentage) {}
+        bool operator< (const bestSCAResult b) const{
+            return this->total_time < b.total_time;
+        }
+        void print(std::ostream &ofs){
+            ofs << "SCA offloading time (ns): " << this->total_time << " = CPU " << this->elapsed_time.first << " + PIM " << this->elapsed_time.second << \
+                " + REUSE " << this->reuse_cost << " + SWITCH " << this->switch_cost << std::endl;
+            ofs << "SCA configuration: " << " sca_mpki_threshold: " << this->sca_mpki_threshold \
+                << " sca_parallelism_threshold: " << this->sca_parallelism_threshold \
+                << " instr_threshold_percentage: " << this->instr_threshold_percentage \
+                << std::endl;
+        }
+    };
+
 
   private:
     CommandLineParser *_command_line_parser;
@@ -209,7 +240,7 @@ class CostSolver {
     COST PermuteDecision(DECISION &decision, const std::vector<BBLID> &cur_batch, const BBLIDTrieNode *partial_root);
 
     DECISION PrintMPKIStats(std::ostream &ofs);
-    DECISION PrintSCAStats(std::ostream &ofs, int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
+    CostSolver::bestSCAResult PrintSCAStats(int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
     DECISION PrintReuseStats(std::ostream &ofs);
     DECISION PrintGreedyStats(std::ostream &ofs);
     void PrintDisjointSets(std::ostream &ofs);

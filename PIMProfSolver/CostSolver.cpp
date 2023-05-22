@@ -62,8 +62,8 @@ void CostSolver::initialize(CommandLineParser *parser)
     _flush_cost[CostSite::PIM] = 30;
     _fetch_cost[CostSite::CPU] = 60;
     _fetch_cost[CostSite::PIM] = 30;
-    _switch_cost[CostSite::CPU] = 2000;
-    _switch_cost[CostSite::PIM] = 2000;
+    _switch_cost[CostSite::CPU] = 0;
+    _switch_cost[CostSite::PIM] = 0;
     _mpki_threshold = 5;
     _parallelism_threshold = 15;
     _batch_threshold = 0.001;
@@ -259,13 +259,15 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
+        bestSCAResult minSCAResult(INT_MAX);
         for (int i = 0; i < 100 ; i+=10){
             for (int k = 0; k < 10 ; k+=1){
                 for (float j = 0; j < 0.02 ; j+=0.002){
-                    PrintSCAStats(ofs, i, k, j);
+                    minSCAResult = std::min(minSCAResult,  PrintSCAStats(i, k, j));
                 }
             }
         }
+        minSCAResult.print(ofs);
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -409,7 +411,7 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 }
 
 
-DECISION CostSolver::PrintSCAStats(std::ostream &ofs, \
+CostSolver::bestSCAResult CostSolver::PrintSCAStats(
                                     int sca_mpki_threshold, \
                                     int sca_parallelism_threshold, 
                                     float instr_threshold_percentage)
@@ -453,12 +455,13 @@ DECISION CostSolver::PrintSCAStats(std::ostream &ofs, \
     COST total_time = reuse_cost + switch_cost + elapsed_time.first + elapsed_time.second;
     assert(total_time == Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count));
 
-    ofs << "SCA offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
-    ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold \
-        << " sca_parallelism_threshold: " << sca_parallelism_threshold \
-        << " instr_threshold_percentage: " << instr_threshold_percentage \
-        << std::endl;
-    return decision;
+    bestSCAResult result(total_time, elapsed_time, reuse_cost, switch_cost, sca_mpki_threshold, sca_parallelism_threshold, instr_threshold_percentage);
+    // ofs << "SCA offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
+    // ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold \
+    //     << " sca_parallelism_threshold: " << sca_parallelism_threshold \
+    //     << " instr_threshold_percentage: " << instr_threshold_percentage \
+    //     << std::endl;
+    return result;
 }
 
 DECISION CostSolver::PrintGreedyStats(std::ostream &ofs)
