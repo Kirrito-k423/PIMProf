@@ -50,6 +50,20 @@ void InjectSniperAnnotationCallBB(Module &M, Function &F) {
     uint64_t funchash[2];
     MurmurHash3_x64_128(F_content.c_str(), F_content.size(), 0, funchash);
 
+    // //获取目标机器的 Triple（三元组），用于指定生成的目标机器：
+    // auto &TM = getAnalysis<TargetMachineWrapperPass>().getTM();
+    // auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    // auto DL = F.getParent()->getDataLayout().getStringRepresentation();
+    // auto Triple = TM.getTargetTriple();
+
+    // //创建代码生成器，用于将 LLVM IR 代码转换为汇编指令：
+    // LegacyPassManager PM;
+    // // SmallVector<char, 0> Buffer;
+    // // raw_svector_ostream OS(Buffer);
+    // auto FileType = TargetMachine::CGFT_AssemblyFile;
+    // // 创建代码生成器
+    // auto *CG = TM.createMCCodeEmitter(TMF, errs(), std::move(Verifier), MachineCodeEmitterConfig(), false);
+    
     for (auto &BB : F) {
         if(BB.empty()) continue;
         // use the content of BB itself as the hash key
@@ -60,9 +74,11 @@ void InjectSniperAnnotationCallBB(Module &M, Function &F) {
         MurmurHash3_x64_128(BB_content.c_str(), BB_content.size(), 0, bblhash);
 
         
-        // errs() << "Before annotator injection: " << "\n";
-        // LLVMPrint(BB, errs());
-        // errs() << "Hash = " << bblhash[1] << " " << bblhash[0] << "\n";
+        errs() << "Before annotator injection: " << "\n";
+        LLVMPrint(BB, errs());
+        errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
+        errs() << "SNIPER_SIM_PIMPROF_BBL_START = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_START,16,false) << "\n";
+        errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
 
         // std::string funcname = BB.getParent()->getName();
         // uint64_t isomp = (funcname.find(OpenMPIdentifier) != std::string::npos);
@@ -77,9 +93,12 @@ void InjectSniperAnnotationCallBB(Module &M, Function &F) {
         InjectSimMagic2(M, beginning, SNIPER_SIM_PIMPROF_BBL_START, funchash[1], bblhash[1]);
         InjectSimMagic2(M, BB.getTerminator(), SNIPER_SIM_PIMPROF_BBL_END, funchash[1], bblhash[1]);
 
-        // errs() << "After annotator injection: " << "\n";
-        // LLVMPrint(BB, errs());
-        // errs() << "Hash = " << bblhash[1] << " " << bblhash[0] << "\n";
+        errs() << "After annotator injection: " << "\n";
+        LLVMPrint(BB, errs());
+        errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
+        errs() << "SNIPER_SIM_PIMPROF_BBL_END = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_END,16,false) << "\n";
+        errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
+
     }
 
 }
@@ -129,14 +148,18 @@ void InjectSniperAnnotationCallMain(Module &M, Function &F) {
     // need to skip all PHIs and LandingPad instructions
     // check the declaration of getFirstInsertionPt()
     Instruction *beginning = &(*F.getEntryBlock().getFirstInsertionPt());
+    errs() << "SNIPER_SIM_CMD_ROI_START = " << llvm::format_hex(SNIPER_SIM_CMD_ROI_START,16,false) << "\n";
+    errs() << "SNIPER_SIM_PIMPROF_BBL_START = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_START,16,false) << "\n";
     InjectSimMagic0(M, beginning, SNIPER_SIM_CMD_ROI_START);
-    InjectSimMagic2(M, beginning, SNIPER_SIM_PIMPROF_BBL_START, MAIN_BBLID, MAIN_BBLID);
+    InjectSimMagic2(M, beginning, SNIPER_SIM_PIMPROF_BBL_START, MAIN_BBLID, TSJ_BBLID);
 
     // inject an end call before every return instruction
     for (auto &BB : F) {
         for (auto &I : BB) {
             if (isa<ReturnInst>(I)) {
-                InjectSimMagic2(M, &I, SNIPER_SIM_PIMPROF_BBL_END, MAIN_BBLID, MAIN_BBLID);
+                errs() << "SNIPER_SIM_PIMPROF_BBL_END = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_END,16,false) << "\n";
+                errs() << "SNIPER_SIM_CMD_ROI_END = " << llvm::format_hex(SNIPER_SIM_CMD_ROI_END,16,false) << "\n";
+                InjectSimMagic2(M, &I, SNIPER_SIM_PIMPROF_BBL_END, MAIN_BBLID, TSJ_BBLID);
                 InjectSimMagic0(M, &I, SNIPER_SIM_CMD_ROI_END);
             }
         }

@@ -22,6 +22,14 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/FormattedStream.h"
 
+// #include "llvm/ADT/SmallVector.h"
+// #include "llvm/MC/MCInst.h"
+// // #include "llvm/MC/MCOperand.h"
+// #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
+// #include "llvm/MC/MCExpr.h"
+// #include "llvm/MC/MCSymbol.h"
+// #include "llvm/MC/MCInstBuilder.h"
+
 #include "Common.h"
 
 using namespace llvm;
@@ -266,5 +274,31 @@ void LLVMPrint(const Function &F, raw_ostream &out) {
     }
     out << "\n";
 }
+
+
+// void LLVMPrintASS(const BasicBlock &BB, raw_ostream &out) {
+//     out << "PrintBBS: " << BB.getName() << "\n";
+//     for (const auto &I : BB) {
+//         MCInst Inst;
+//         MCOperand Arg1, Arg2, Arg3;
+//         DenseMap<MCRegister, int> RegMap;
+//         // 在这里将 LLVM IR 转换为汇编指令
+//         bool Success = CG->LowerInstruction(I, Inst);
+//         // 将生成的汇编指令打印出来
+//         for (auto &Op : Inst) {
+//             if (Op.isReg()) {
+//                 if (RegMap.find(Op.getReg()) == RegMap.end())
+//                     RegMap[Op.getReg()] = RegMap.size();
+//                 Op.setReg(X86::GR64RegClass.getRegister(RegMap[Op.getReg()])); // 将虚拟寄存器分配为物理寄存器
+//             }
+//         }
+//         MCInstPrinter &IP = *TM.getMCAsmInfo()->getInstPrinter();
+//         IP.printInst(&Inst, out, "", TII, RegMap);
+//         out << "\n";
+//         // I.print(out);
+//         // out << "\n";
+//     }
+//     out << "\n";
+// }
 
 } // namespace PIMProf
