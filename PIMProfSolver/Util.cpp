@@ -13,7 +13,7 @@ using namespace PIMProf;
 
 void Usage()
 {
-    infomsg("Usage: ./Solver.exe <mode> -c <cpu_stats_file> -p <pim_stats_file> -r <reuse_file> -o <output_file>");
+    infomsg("Usage: ./Solver.exe <mode> -c <cpu_stats_file> -p <pim_stats_file> -r <reuse_file> -o <output_file> -s <sca_decision_file>");
     infomsg("Select mode from: mpki, para, reuse");
     exit(0);
 }
@@ -30,13 +30,13 @@ void CommandLineParser::initialize(int argc, char *argv[])
             case 's':
                 _scaDecisionFile = std::string(optarg); std::cout << "sca " << _scaDecisionFile << std::endl; break;
             case 'c':
-                _cpustatsfile = std::string(optarg); std::cout << "c " << _cpustatsfile << std::endl; break;
+                _cpustatsfile = std::string(optarg); std::cout << "cpu " << _cpustatsfile << std::endl; break;
             case 'p':
-                _pimstatsfile = std::string(optarg); std::cout << "p " << _pimstatsfile << std::endl; break;
+                _pimstatsfile = std::string(optarg); std::cout << "pim " << _pimstatsfile << std::endl; break;
             case 'r':
-                _reusefile = std::string(optarg); std::cout << "r " << _reusefile << std::endl; break;
+                _reusefile = std::string(optarg); std::cout << "reuse " << _reusefile << std::endl; break;
             case 'o':
-                _outputfile = std::string(optarg); std::cout << "o " << _outputfile << std::endl; break;
+                _outputfile = std::string(optarg); std::cout << "output " << _outputfile << std::endl; break;
             case 'h': // -h or --help
             case '?': // Unrecognized option
             default:
@@ -71,17 +71,18 @@ void CommandLineParser::initialize(int argc, char *argv[])
     }
     else if (_mode_string == "reuse") {
         _mode = Mode::REUSE;
-        const char* const short_opt = "c:p:r:o:h";
+        const char* const short_opt = "s:c:p:r:o:h";
         const option long_opt[] = {
+            {"sca", required_argument, nullptr, 's'},
             {"cpu", required_argument, nullptr, 'c'},
             {"pim", required_argument, nullptr, 'p'},
             {"reuse", required_argument, nullptr, 'r'},
-            {"output", required_argument, nullptr, 'o'},
+            {"output", required_argument, nullptr, 'o'},   
             {"help", no_argument, nullptr, 'h'},
             {nullptr, no_argument, nullptr, 0}
         };
         parser(short_opt, long_opt);
-        if (_cpustatsfile == "" || _pimstatsfile == "" || _reusefile == "" || _outputfile == "") {
+        if (_cpustatsfile == "" || _pimstatsfile == "" || _reusefile == "" || _outputfile == "" || _scaDecisionFile=="") {
             Usage();
         }
     }

@@ -118,7 +118,18 @@ void CostSolver::ParseDecision(std::istream &ifs)
     std::string line, token;
     // int tid = 0;
     while(std::getline(ifs, line)) {
-
+        std::stringstream ss(line);
+        UUID keyUUID;
+        std::string value;
+        ss >> std::hex >> keyUUID.first
+            >> std::hex >> keyUUID.second
+            >> value;
+        // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << std::endl;
+        // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
+        if(value=="PIM")
+            scaDecision[keyUUID]=CostSite::PIM;
+        else
+            scaDecision[keyUUID]=CostSite::CPU;
     }
 }
 
