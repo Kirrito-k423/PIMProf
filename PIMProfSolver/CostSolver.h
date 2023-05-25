@@ -161,6 +161,7 @@ class CostSolver {
 
 
   private:
+    DecisionFromFile scaDecision;
     CommandLineParser *_command_line_parser;
 
     // instance of get_id function, prototype:
@@ -205,6 +206,7 @@ class CostSolver {
             _flush_cost[PIM] + _fetch_cost[CPU]);
     }
 
+    void ParseDecision(std::istream &ifs);
     void ParseStats(std::istream &ifs, UUIDHashMap<ThreadRunStats *> &stats);
     void ParseReuse(std::istream &ifs, BBLIDDataReuse &reuse, SwitchCountList &switchcnt);
 
@@ -240,6 +242,7 @@ class CostSolver {
     COST PermuteDecision(DECISION &decision, const std::vector<BBLID> &cur_batch, const BBLIDTrieNode *partial_root);
 
     DECISION PrintMPKIStats(std::ostream &ofs);
+    void PrintSCAStatsFromfile(DecisionFromFile decision, std::ostream &ofs);
     CostSolver::bestSCAResult PrintSCAStats(int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
     DECISION PrintReuseStats(std::ostream &ofs);
     DECISION PrintGreedyStats(std::ostream &ofs);

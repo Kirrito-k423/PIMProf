@@ -41,12 +41,14 @@ void CostSolver::initialize(CommandLineParser *parser)
     _batch_threshold = 0;
     _batch_size = 0;
 
+    std::ifstream scaDecision(_command_line_parser->scaDecisionFile());
     std::ifstream cpustats(_command_line_parser->cpustatsfile());
     std::ifstream pimstats(_command_line_parser->pimstatsfile());
     std::ifstream reuse(_command_line_parser->reusefile());
     assert(cpustats.is_open());
     assert(pimstats.is_open());
     assert(reuse.is_open());
+    ParseDecision(scaDecision);
     ParseStats(cpustats, _bbl_hash2stats[CPU]);
     ParseStats(pimstats, _bbl_hash2stats[PIM]);
     ParseReuse(reuse, _bbl_data_reuse, _bbl_switch_count);
@@ -109,6 +111,15 @@ const std::vector<ThreadRunStats *>* CostSolver::getBBLSortedStats()
         _dirty = false;
     }
     return _bbl_sorted_stats;
+}
+
+void CostSolver::ParseDecision(std::istream &ifs)
+{
+    std::string line, token;
+    // int tid = 0;
+    while(std::getline(ifs, line)) {
+
+    }
 }
 
 void CostSolver::ParseStats(std::istream &ifs, UUIDHashMap<ThreadRunStats *> &statsmap)
@@ -259,6 +270,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
+        PrintSCAStatsFromfile(scaDecision, ofs);
         bestSCAResult minSCAResult(INT_MAX);
         for (int i = 0; i < 100 ; i+=10){
             for (int k = 0; k < 10 ; k+=1){
@@ -410,6 +422,30 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
     return decision;
 }
 
+
+void CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
+    const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
+    DECISION decision;
+    for(auto it = sorted[PIM].begin(); it != sorted[PIM].end(); ++it){
+        if(decisionFromFile.count((*it)->bblhash)){
+            decision.push_back(decisionFromFile[(*it)->bblhash]);
+        }else{
+            decision.push_back(CostSite::CPU);
+        }
+    }
+    COST reuse_cost = ReuseCost(decision, _bbl_data_reuse.getRoot());
+    COST switch_cost = SwitchCost(decision, _bbl_switch_count);
+    auto elapsed_time = ElapsedTime(decision);
+    COST total_time = reuse_cost + switch_cost + elapsed_time.first + elapsed_time.second;
+    assert(total_time == Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count));
+
+    ofs << "SCAFromfile offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
+    // ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold \
+    //     << " sca_parallelism_threshold: " << sca_parallelism_threshold \
+    //     << " instr_threshold_percentage: " << instr_threshold_percentage \
+    //     << std::endl;
+    return ;
+}
 
 CostSolver::bestSCAResult CostSolver::PrintSCAStats(
                                     int sca_mpki_threshold, \

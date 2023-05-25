@@ -107,7 +107,7 @@ class CommandLineParser {
         MPKI, PARA, REUSE, DEBUG
     };
   private:
-    std::string _cpustatsfile, _pimstatsfile;
+    std::string _scaDecisionFile, _cpustatsfile, _pimstatsfile;
     std::string _reusefile;
     std::string _outputfile;
     Mode _mode;
@@ -115,6 +115,7 @@ class CommandLineParser {
   public:
     void initialize(int argc, char *argv[]);
 
+    inline std::string scaDecisionFile() { return _scaDecisionFile; }
     inline std::string cpustatsfile() { return _cpustatsfile; }
     inline std::string pimstatsfile() { return _pimstatsfile; }
     inline std::string reusefile() { return _reusefile; }

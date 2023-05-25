@@ -27,6 +27,8 @@ void CommandLineParser::initialize(int argc, char *argv[])
 
             switch (opt)
             {
+            case 's':
+                _scaDecisionFile = std::string(optarg); std::cout << "sca " << _scaDecisionFile << std::endl; break;
             case 'c':
                 _cpustatsfile = std::string(optarg); std::cout << "c " << _cpustatsfile << std::endl; break;
             case 'p':

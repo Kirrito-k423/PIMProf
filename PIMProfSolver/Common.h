@@ -129,6 +129,7 @@ inline const std::string getCostSiteString(CostSite site)
 /// put the 1st and 4th BBL on PIM and 2nd and 3rd on CPU for execution
 /// The target of CostSolver is to figure out the decision that will lead to the minimum total cost.
 typedef std::vector<CostSite> DECISION;
+typedef std::map<UUID,CostSite> DecisionFromFile;
 
 enum ACCESS_TYPE
 {
