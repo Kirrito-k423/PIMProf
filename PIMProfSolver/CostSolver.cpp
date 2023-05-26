@@ -378,9 +378,9 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setw(15) << pimstats->MaxElapsedTime()
                 << std::setw(15) << diff
                 << "  "
-                << std::setw(21) << (int64_t)cpustats->bblhash.first
+                << std::setw(21) << std::hex << cpustats->bblhash.first
                 << "  "
-                << std::setw(21) << (int64_t)cpustats->bblhash.second
+                << std::setw(21) << std::hex << cpustats->bblhash.second
                 << std::setfill(' ') << std::endl;
         }
     }
