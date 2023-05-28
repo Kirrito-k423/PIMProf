@@ -225,7 +225,7 @@ class CostSolver {
 
     void ReadConfig(ConfigReader &reader);
 
-    std::ostream &PrintDecision(std::ostream &out, const DECISION &decision, bool toscreen);
+    std::ostream &PrintDecision(std::ostream &out, const DECISION &decision, const DECISION &scaPrintDecision , bool toscreen);
     // std::ostream &PrintDecisionStat(std::ostream &out, const DECISION &decision, const std::string &name);
     // std::ostream &PrintCostBreakdown(std::ostream &out, const DECISION &decision, const std::string &name);
     // std::ostream &PrintAnalytics(std::ostream &out);
@@ -242,7 +242,7 @@ class CostSolver {
     COST PermuteDecision(DECISION &decision, const std::vector<BBLID> &cur_batch, const BBLIDTrieNode *partial_root);
 
     DECISION PrintMPKIStats(std::ostream &ofs);
-    void PrintSCAStatsFromfile(DecisionFromFile decision, std::ostream &ofs);
+    DECISION PrintSCAStatsFromfile(DecisionFromFile decision, std::ostream &ofs);
     CostSolver::bestSCAResult PrintSCAStats(int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
     DECISION PrintReuseStats(std::ostream &ofs);
     DECISION PrintGreedyStats(std::ostream &ofs);

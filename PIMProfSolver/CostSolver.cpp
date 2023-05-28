@@ -118,16 +118,20 @@ void CostSolver::ParseDecision(std::istream &ifs)
     std::string line, token;
     // int tid = 0;
     CostSite preStatus=CostSite::PIM;
+    int preCycles = 0;
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
         UUID keyUUID;
         std::string value;
+        int curCycles;
         ss >> std::hex >> keyUUID.first
             >> std::hex >> keyUUID.second
-            >> value;
-        // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << std::endl;
+            >> value >> std::dec >> curCycles;
+        // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(value=="PIM"){
+        if(preCycles > 5*curCycles){
+            scaDecision[keyUUID]=preStatus;
+        }else if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
             preStatus=CostSite::PIM;
         }else if(value=="Follower"){
@@ -138,6 +142,7 @@ void CostSolver::ParseDecision(std::istream &ifs)
         }else{
             assert(false);
         }
+        preCycles=curCycles;
     }
 }
 
@@ -270,6 +275,7 @@ void CostSolver::ParseReuse(std::istream &ifs, DataReuse<BBLID> &reuse, SwitchCo
 DECISION CostSolver::PrintSolution(std::ostream &ofs)
 {
     DECISION decision;
+    DECISION scaPrintDecision;
     
     if (_command_line_parser->mode() == CommandLineParser::Mode::MPKI) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -289,7 +295,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
-        PrintSCAStatsFromfile(scaDecision, ofs);
+        scaPrintDecision = PrintSCAStatsFromfile(scaDecision, ofs);
         bestSCAResult minSCAResult(INT_MAX);
         for (int i = 0; i < 100 ; i+=10){
             for (int k = 0; k < 10 ; k+=1){
@@ -306,7 +312,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         decision = Debug_HierarchicalDecision(ofs);
     }
 
-    PrintDecision(ofs, decision, false);
+    PrintDecision(ofs, decision, scaPrintDecision, false);
 
     return decision;
 }
@@ -353,7 +359,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
 //     return ofs;
 // }
 
-std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &decision, bool toscreen)
+std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &decision, const DECISION &scaPrintDecision, bool toscreen)
 {
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     ofs << HORIZONTAL_LINE << std::endl;
@@ -368,6 +374,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
     else {
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
+            << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(15) << "CPU"
             << std::setw(15) << "PIM"
@@ -381,6 +388,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
             ofs << std::setw(7) << i
                 << std::setw(10) << getCostSiteString(decision[i])
+                << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                 << std::setw(14) << pimstats->parallelism()
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -442,7 +450,7 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 }
 
 
-void CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
+DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     DECISION decision;
     for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
@@ -472,7 +480,7 @@ void CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::o
     //     << " sca_parallelism_threshold: " << sca_parallelism_threshold \
     //     << " instr_threshold_percentage: " << instr_threshold_percentage \
     //     << std::endl;
-    return ;
+    return decision;
 }
 
 CostSolver::bestSCAResult CostSolver::PrintSCAStats(
