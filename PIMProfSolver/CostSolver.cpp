@@ -119,6 +119,8 @@ void CostSolver::ParseDecision(std::istream &ifs)
     // int tid = 0;
     CostSite preStatus=CostSite::PIM;
     int preCycles = 0;
+    CostSite hugeStatus=CostSite::PIM;
+    int preHugeCycles = 0;
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
         UUID keyUUID;
@@ -129,20 +131,25 @@ void CostSolver::ParseDecision(std::istream &ifs)
             >> value >> std::dec >> curCycles;
         // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(preCycles > 5*curCycles){
+        if(curCycles < 100){
+            scaDecision[keyUUID]=hugeStatus;
+        }else if(preCycles > 2.5 *curCycles){
             scaDecision[keyUUID]=preStatus;
         }else if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
-            preStatus=CostSite::PIM;
         }else if(value=="Follower"){
             scaDecision[keyUUID]=preStatus;
         }else if(value=="CPU"){
             scaDecision[keyUUID]=CostSite::CPU;
-            preStatus=CostSite::CPU;
         }else{
             assert(false);
         }
         preCycles=curCycles;
+        preStatus=scaDecision[keyUUID];
+        if(curCycles > 2000){
+            hugeStatus =  scaDecision[keyUUID];
+            preHugeCycles = curCycles;
+        }
     }
 }
 
@@ -457,7 +464,7 @@ DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, st
         auto *cpustats = sorted[CPU][i];
         auto *pimstats = sorted[PIM][i];
         // deal with the part that is not inside any BBL
-        if (cpustats->bblhash == GLOBAL_BBLHASH) {         
+        if (cpustats->bblhash == MAIN_BBLHASH) {         
             if (cpustats->MaxElapsedTime() <= pimstats->MaxElapsedTime()) {
                 decision.push_back(CPU);
             }else {
