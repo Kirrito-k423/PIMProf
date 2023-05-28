@@ -445,9 +445,18 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 void CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     DECISION decision;
-    for(auto it = sorted[PIM].begin(); it != sorted[PIM].end(); ++it){
-        if(decisionFromFile.count((*it)->bblhash)){
-            decision.push_back(decisionFromFile[(*it)->bblhash]);
+    for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
+        auto *cpustats = sorted[CPU][i];
+        auto *pimstats = sorted[PIM][i];
+        // deal with the part that is not inside any BBL
+        if (cpustats->bblhash == GLOBAL_BBLHASH) {         
+            if (cpustats->MaxElapsedTime() <= pimstats->MaxElapsedTime()) {
+                decision.push_back(CPU);
+            }else {
+                decision.push_back(PIM);
+            }
+        }else if(decisionFromFile.count(cpustats->bblhash)){
+            decision.push_back(decisionFromFile[cpustats->bblhash]);
         }else{
             decision.push_back(CostSite::CPU);
         }
