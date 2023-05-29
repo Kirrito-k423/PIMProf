@@ -132,11 +132,11 @@ void CostSolver::ParseDecision(std::istream &ifs)
             >> value >> std::dec >> curCycles;
         // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(curCycles < 120){
+        if(curCycles < 170){
             scaDecision[keyUUID]=hugeStatus;
         }else if(preCycles > 4 *curCycles){
             scaDecision[keyUUID]=preStatus;
-        }else if(stickTimes >= 5 && curCycles < 200){
+        }else if(stickTimes >= 5 && curCycles < 250){
             scaDecision[keyUUID]=preStatus;
             stickTimes=0;
         }else if(value=="PIM"){
