@@ -379,6 +379,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         ofs << std::endl;
     }
     else {
+        std::stringstream IncorrectCPUDecision;
+        std::stringstream IncorrectPIMDecision;
+        COST threshold = (1e+7);
+        COST potential=0;
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
             << std::setw(12) << "scaDecision"
@@ -405,7 +409,87 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << "  "
                 << std::setw(21) << std::hex << cpustats->bblhash.second
                 << std::setfill(' ') << std::endl;
+            if(diff > threshold && getCostSiteString(scaPrintDecision[i])=="C"){
+                IncorrectCPUDecision << std::setw(7) << i
+                << std::setw(10) << getCostSiteString(decision[i])
+                << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(14) << pimstats->parallelism()
+                << std::setw(15) << cpustats->MaxElapsedTime()
+                << std::setw(15) << pimstats->MaxElapsedTime()
+                << std::setw(15) << diff
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.first
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.second
+                << std::setfill(' ') << std::endl;
+                potential += std::abs(diff);
+            }
+            if(diff < -threshold && getCostSiteString(scaPrintDecision[i])=="P"){
+                IncorrectPIMDecision << std::setw(7) << i
+                << std::setw(10) << getCostSiteString(decision[i])
+                << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(14) << pimstats->parallelism()
+                << std::setw(15) << cpustats->MaxElapsedTime()
+                << std::setw(15) << pimstats->MaxElapsedTime()
+                << std::setw(15) << diff
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.first
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.second
+                << std::setfill(' ') << std::endl;
+                potential += std::abs(diff);
+            }
         }
+        // half threshold if  IncorrectDecision is empty
+        while(potential==0){
+            threshold = threshold/10;
+            for (uint32_t i = 0; i < sorted[CPU].size(); i++) {
+                auto *cpustats = sorted[CPU][i];
+                auto *pimstats = sorted[PIM][i];
+                COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
+                if(diff > threshold && getCostSiteString(scaPrintDecision[i])=="C"){
+                    IncorrectCPUDecision << std::setw(7) << i
+                    << std::setw(10) << getCostSiteString(decision[i])
+                    << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                    << std::setw(14) << pimstats->parallelism()
+                    << std::setw(15) << cpustats->MaxElapsedTime()
+                    << std::setw(15) << pimstats->MaxElapsedTime()
+                    << std::setw(15) << diff
+                    << "  "
+                    << std::setw(21) << std::hex << cpustats->bblhash.first
+                    << "  "
+                    << std::setw(21) << std::hex << cpustats->bblhash.second
+                    << std::setfill(' ') << std::endl;
+                    potential += std::abs(diff);
+                }
+                if(diff < -threshold && getCostSiteString(scaPrintDecision[i])=="P"){
+                    IncorrectPIMDecision << std::setw(7) << i
+                    << std::setw(10) << getCostSiteString(decision[i])
+                    << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                    << std::setw(14) << pimstats->parallelism()
+                    << std::setw(15) << cpustats->MaxElapsedTime()
+                    << std::setw(15) << pimstats->MaxElapsedTime()
+                    << std::setw(15) << diff
+                    << "  "
+                    << std::setw(21) << std::hex << cpustats->bblhash.first
+                    << "  "
+                    << std::setw(21) << std::hex << cpustats->bblhash.second
+                    << std::setfill(' ') << std::endl;
+                    potential += std::abs(diff);
+                }
+            }
+        }
+        // Print IncorrectCPUDecision
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "IncorrectCPUDecision" << std::endl;
+        ofs << IncorrectCPUDecision.str();
+        // Print IncorrectPIMDecision
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "IncorrectPIMDecision" << std::endl;
+        ofs << IncorrectPIMDecision.str();
+        // optimize potential
+        auto pimprofTime = ElapsedTime(decision);
+        ofs << "Optimize potential " << potential/(pimprofTime.first + pimprofTime.second) << std::endl;
     }
     return ofs;
 }
