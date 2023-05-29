@@ -121,6 +121,7 @@ void CostSolver::ParseDecision(std::istream &ifs)
     int preCycles = 0;
     CostSite hugeStatus=CostSite::PIM;
     int preHugeCycles = 0;
+    int stickTimes = 0;
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
         UUID keyUUID;
@@ -131,10 +132,13 @@ void CostSolver::ParseDecision(std::istream &ifs)
             >> value >> std::dec >> curCycles;
         // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(curCycles < 100){
+        if(curCycles < 120){
             scaDecision[keyUUID]=hugeStatus;
-        }else if(preCycles > 2.5 *curCycles){
+        }else if(preCycles > 4 *curCycles){
             scaDecision[keyUUID]=preStatus;
+        }else if(stickTimes >= 5 && curCycles < 200){
+            scaDecision[keyUUID]=preStatus;
+            stickTimes=0;
         }else if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
         }else if(value=="Follower"){
@@ -143,8 +147,13 @@ void CostSolver::ParseDecision(std::istream &ifs)
             scaDecision[keyUUID]=CostSite::CPU;
         }else{
             assert(false);
-        }
+        }  
         preCycles=curCycles;
+        if(preStatus==scaDecision[keyUUID]){
+            stickTimes++;
+        }else{
+            stickTimes=0;
+        }
         preStatus=scaDecision[keyUUID];
         if(curCycles > 2000){
             hugeStatus =  scaDecision[keyUUID];
@@ -490,6 +499,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         // optimize potential
         auto pimprofTime = ElapsedTime(decision);
         ofs << "Optimize potential " << potential/(pimprofTime.first + pimprofTime.second) << std::endl;
+        ReuseCostPrint(scaPrintDecision, _bbl_data_reuse.getRoot(), ofs);
     }
     return ofs;
 }
@@ -1278,6 +1288,57 @@ void CostSolver::TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, cons
             }
             else {
                 TrieBFS(cost, decision, elem.first, elem.second, false);
+            }
+        }
+    }
+}
+
+// decision here should not be INVALID
+COST CostSolver::ReuseCostPrint(const DECISION &decision, const BBLIDTrieNode *reusetree, std::ostream &ofs)
+{
+    COST cur_reuse_cost = 0;
+    for (auto elem : reusetree->_children) {
+        TrieBFS(cur_reuse_cost, decision, elem.first, elem.second, false, {0,0} ,ofs);
+    }
+    return cur_reuse_cost;
+}
+
+void CostSolver::TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent, std::pair<BBLID,BBLID> diffBBLIDs ,std::ostream &ofs)
+{
+    if (root->_isLeaf) {
+        // The cost of a segment is zero if and only if the entire segment is in the same place. In other words, if isDifferent, then the cost is non-zero.
+        if (isDifferent) {
+            // If the initial W is on CPU and there are subsequent R/W on PIM,
+            // then this segment contributes to a flush of CPU and data fetch from PIM.
+            // We conservatively assume that the fetch will promote data to L1
+            assert(bblid == root->_cur);
+            COST delta = 0;
+            if (decision[root->_cur] == CPU) {
+                delta += root->_count * (_flush_cost[CPU] + _fetch_cost[PIM]);
+            }
+            // If the initial W is on PIM and there are subsequent R/W on CPU,
+            // then this segment contributes to a flush of PIM and data fetch from CPU
+            else {
+                delta += root->_count * (_flush_cost[PIM] + _fetch_cost[CPU]);
+            }
+            cost += delta;
+            if(delta > 1e+6)
+                ofs << "cost delta: " << delta 
+                << " diffBBLIDs: " 
+                << diffBBLIDs.first 
+                << " to " << diffBBLIDs.second << std::endl;
+        }
+    }
+    else {
+        for (auto elem : root->_children) {
+            if (isDifferent) {
+                TrieBFS(cost, decision, elem.first, elem.second, true, diffBBLIDs, ofs);
+            }
+            else if (decision[bblid] != decision[elem.first]) {
+                TrieBFS(cost, decision, elem.first, elem.second, true, {bblid, elem.first}, ofs);
+            }
+            else {
+                TrieBFS(cost, decision, elem.first, elem.second, false, diffBBLIDs, ofs);
             }
         }
     }
