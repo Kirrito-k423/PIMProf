@@ -41,6 +41,7 @@ static const std::string PThreadsIdentifier = "pthread_create";
 
 typedef uint32_t CACHE_STATS;
 typedef double COST;
+typedef uint64_t BBCOUNT;
 typedef int64_t BBLID;
 typedef std::pair<uint64_t, uint64_t> UUID;
 

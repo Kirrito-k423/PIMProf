@@ -127,6 +127,16 @@ class SwitchCountList{
             return result;
         }
 
+        void bbCountFunc(std::vector<BBCOUNT> &bbCount) {
+            if (_toidxvec.size() == 0) return ;
+            for (auto &elem : _toidxvec) {
+                uint64_t toidx = elem.first;
+                uint64_t count = elem.second;
+                bbCount[toidx]+=count;
+            }
+            return ;
+        }
+
         // descending sort by count
         void Sort() {
             std::sort(_toidxvec.begin(), _toidxvec.end(), 

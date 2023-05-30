@@ -220,6 +220,7 @@ class CostSolver {
     COST ElapsedTime(CostSite site); // return CPU/PIM only elapsed time
     std::pair<COST, COST> ElapsedTime(const DECISION &decision); // return execution time pair (cpu_elapsed_time, pim_elapsed_time) for decision
     COST SwitchCost(const DECISION &decision, const SwitchCountList &switchcnt);
+    std::vector<BBCOUNT> bbTimesFromSwitchInfo(const DECISION &decision, const SwitchCountList &switchcnt);
     COST ReuseCost(const DECISION &decision, const BBLIDTrieNode *reusetree);
     void TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent);
     COST ReuseCostPrint(const DECISION &decision, const BBLIDTrieNode *reusetree, std::ostream &ofs);

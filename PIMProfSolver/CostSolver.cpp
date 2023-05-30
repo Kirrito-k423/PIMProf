@@ -392,10 +392,12 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         std::stringstream IncorrectPIMDecision;
         COST threshold = (1e+7);
         COST potential=0;
+        std::vector<BBCOUNT> bbcount = bbTimesFromSwitchInfo(decision, _bbl_switch_count);
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
             << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
+            << std::setw(14) << "bbCount"
             << std::setw(15) << "CPU"
             << std::setw(15) << "PIM"
             << std::setw(15) << "Difference"
@@ -410,6 +412,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                 << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
                 << std::setw(15) << diff
@@ -423,6 +426,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                 << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
                 << std::setw(15) << diff
@@ -438,6 +442,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                 << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
                 << std::setw(15) << diff
@@ -461,6 +466,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                     << std::setw(14) << pimstats->parallelism()
+                    << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
                     << std::setw(15) << pimstats->MaxElapsedTime()
                     << std::setw(15) << diff
@@ -476,6 +482,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
                     << std::setw(14) << pimstats->parallelism()
+                    << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
                     << std::setw(15) << pimstats->MaxElapsedTime()
                     << std::setw(15) << diff
@@ -1247,6 +1254,15 @@ COST CostSolver::SwitchCost(const DECISION &decision, const SwitchCountList &swi
     }
     
     return cur_switch_cost;
+}
+
+std::vector<BBCOUNT> CostSolver::bbTimesFromSwitchInfo(const DECISION &decision, const SwitchCountList &switchcnt)
+{
+    std::vector<BBCOUNT> bbCount(decision.size(), 0);
+    for (auto row : switchcnt) {
+        row.bbCountFunc(bbCount);
+    } 
+    return bbCount;
 }
 
 // decision here should not be INVALID
