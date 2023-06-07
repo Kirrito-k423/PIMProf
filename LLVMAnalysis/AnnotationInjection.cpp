@@ -74,11 +74,11 @@ void InjectSniperAnnotationCallBB(Module &M, Function &F) {
         MurmurHash3_x64_128(BB_content.c_str(), BB_content.size(), 0, bblhash);
 
         
-        errs() << "Before annotator injection: " << "\n";
-        LLVMPrint(BB, errs());
-        errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
-        errs() << "SNIPER_SIM_PIMPROF_BBL_START = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_START,16,false) << "\n";
-        errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
+        // errs() << "Before annotator injection: " << "\n";
+        // LLVMPrint(BB, errs());
+        // errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
+        // errs() << "SNIPER_SIM_PIMPROF_BBL_START = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_START,16,false) << "\n";
+        // errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
 
         // std::string funcname = BB.getParent()->getName();
         // uint64_t isomp = (funcname.find(OpenMPIdentifier) != std::string::npos);
@@ -93,11 +93,11 @@ void InjectSniperAnnotationCallBB(Module &M, Function &F) {
         InjectSimMagic2(M, beginning, SNIPER_SIM_PIMPROF_BBL_START, funchash[1], bblhash[1]);
         InjectSimMagic2(M, BB.getTerminator(), SNIPER_SIM_PIMPROF_BBL_END, funchash[1], bblhash[1]);
 
-        errs() << "After annotator injection: " << "\n";
-        LLVMPrint(BB, errs());
-        errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
-        errs() << "SNIPER_SIM_PIMPROF_BBL_END = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_END,16,false) << "\n";
-        errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
+        // errs() << "After annotator injection: " << "\n";
+        // LLVMPrint(BB, errs());
+        // errs() << "Hash = " << llvm::format_hex(bblhash[1],16,false) << " " << llvm::format_hex(bblhash[0],16,false) << "\n";
+        // errs() << "SNIPER_SIM_PIMPROF_BBL_END = " << llvm::format_hex(SNIPER_SIM_PIMPROF_BBL_END,16,false) << "\n";
+        // errs() << "Hash = " << llvm::format_hex(funchash[1],16,false) << " " << llvm::format_hex(bblhash[1],16,false) << "\n";
 
     }
 

@@ -390,6 +390,11 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
     else {
         std::stringstream IncorrectCPUDecision;
         std::stringstream IncorrectPIMDecision;
+        const float showThrehold = 0.01;
+        std::map<COST, uint32_t> top10PIMProfBB;
+        std::map<COST, uint32_t> top10SCABB;
+        COST PIMProfCost = Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count);
+        COST scaCost = Cost(scaPrintDecision, _bbl_data_reuse.getRoot(), _bbl_switch_count);
         COST threshold = (1e+7);
         COST potential=0;
         std::vector<BBCOUNT> bbcount = bbTimesFromSwitchInfo(decision, _bbl_switch_count);
@@ -421,6 +426,14 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << "  "
                 << std::setw(21) << std::hex << cpustats->bblhash.second
                 << std::setfill(' ') << std::endl;
+            COST PIMProfBBCost = sorted[decision[i]][i]->MaxElapsedTime();
+            COST scaBBCost = sorted[scaPrintDecision[i]][i]->MaxElapsedTime();
+            if(PIMProfBBCost > showThrehold * PIMProfCost){
+                top10PIMProfBB[PIMProfBBCost] = i;
+            }
+            if(scaBBCost > showThrehold * scaCost){
+                top10SCABB[scaBBCost] = i;
+            }
             if(diff > threshold && getCostSiteString(scaPrintDecision[i])=="C"){
                 IncorrectCPUDecision << std::setw(7) << i
                 << std::setw(10) << getCostSiteString(decision[i])
@@ -495,6 +508,60 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 }
             }
         }
+        // Print top10PIMProfBB[PIMProfBBCost] = i;
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "top10PIMProfBB" << std::endl;
+        COST sumofShowBBTime  = 0;
+        for(auto it = top10PIMProfBB.begin(); it != top10PIMProfBB.end(); it++){
+            auto key = it->first;
+            auto i = it->second;
+            auto *cpustats = sorted[CPU][i];
+            auto *pimstats = sorted[PIM][i];
+            COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
+            ofs << std::setw(7) << i
+                << std::setw(10) << getCostSiteString(decision[i])
+                << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << bbcount[i]
+                << std::setw(15) << cpustats->MaxElapsedTime()
+                << std::setw(15) << pimstats->MaxElapsedTime()
+                << std::setw(15) << key*100/PIMProfCost 
+                << std::setw(15) << diff
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.first
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.second
+                << std::setfill(' ') << std::endl;
+                sumofShowBBTime += key;
+        }
+        ofs << "ShowBBTime: " << sumofShowBBTime*100/PIMProfCost << " %";
+        // Print top10SCABB[] = i;
+        ofs << HORIZONTAL_LINE << std::endl;
+        ofs << "top10SCABB" << std::endl;
+        sumofShowBBTime  = 0;
+        for(auto it = top10SCABB.begin(); it != top10SCABB.end(); it++){
+            auto key = it->first;
+            auto i = it->second;
+            auto *cpustats = sorted[CPU][i];
+            auto *pimstats = sorted[PIM][i];
+            COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
+            ofs << std::setw(7) << i
+                << std::setw(10) << getCostSiteString(decision[i])
+                << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << bbcount[i]
+                << std::setw(15) << cpustats->MaxElapsedTime()
+                << std::setw(15) << pimstats->MaxElapsedTime()
+                << std::setw(15) << key*100/scaCost 
+                << std::setw(15) << diff
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.first
+                << "  "
+                << std::setw(21) << std::hex << cpustats->bblhash.second
+                << std::setfill(' ') << std::endl;
+                sumofShowBBTime += key;
+        }
+        ofs << "ShowBBTime: " << sumofShowBBTime*100/scaCost << " %";
         // Print IncorrectCPUDecision
         ofs << HORIZONTAL_LINE << std::endl;
         ofs << "IncorrectCPUDecision" << std::endl;
