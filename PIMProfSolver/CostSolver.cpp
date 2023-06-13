@@ -121,7 +121,7 @@ void CostSolver::ParseDecision(std::istream &ifs)
     int preCycles = 0;
     CostSite hugeStatus=CostSite::PIM;
     int preHugeCycles = 0;
-    int stickTimes = 0;
+    // int stickTimes = 0;
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
         UUID keyUUID;
@@ -132,13 +132,14 @@ void CostSolver::ParseDecision(std::istream &ifs)
             >> value >> std::dec >> curCycles;
         // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(curCycles < 170){
+        if(curCycles > 0 && curCycles < 100){
             scaDecision[keyUUID]=hugeStatus;
         }else if(preCycles > 4 *curCycles){
             scaDecision[keyUUID]=preStatus;
-        }else if(stickTimes >= 5 && curCycles < 250){
-            scaDecision[keyUUID]=preStatus;
-            stickTimes=0;
+        // After applying the decision tree, the continuity has been disrupted.
+        // }else if(stickTimes >= 5 && curCycles < 250){
+        //     scaDecision[keyUUID]=preStatus;
+        //     stickTimes=0;
         }else if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
         }else if(value=="Follower"){
@@ -149,11 +150,11 @@ void CostSolver::ParseDecision(std::istream &ifs)
             assert(false);
         }  
         preCycles=curCycles;
-        if(preStatus==scaDecision[keyUUID]){
-            stickTimes++;
-        }else{
-            stickTimes=0;
-        }
+        // if(preStatus==scaDecision[keyUUID]){
+        //     stickTimes++;
+        // }else{
+        //     stickTimes=0;
+        // }
         preStatus=scaDecision[keyUUID];
         if(curCycles > 2000){
             hugeStatus =  scaDecision[keyUUID];
@@ -390,7 +391,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
     else {
         std::stringstream IncorrectCPUDecision;
         std::stringstream IncorrectPIMDecision;
-        const float showThrehold = 0.01;
+        const float showThrehold = 0.005;
         std::map<COST, uint32_t> top10PIMProfBB;
         std::map<COST, uint32_t> top10SCABB;
         COST PIMProfCost = Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count);
@@ -413,10 +414,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             auto *cpustats = sorted[CPU][i];
             auto *pimstats = sorted[PIM][i];
             COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
-            ofs << std::setw(7) << i
+            ofs << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -435,10 +436,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 top10SCABB[scaBBCost] = i;
             }
             if(diff > threshold && getCostSiteString(scaPrintDecision[i])=="C"){
-                IncorrectCPUDecision << std::setw(7) << i
+                IncorrectCPUDecision << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -451,10 +452,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 potential += std::abs(diff);
             }
             if(diff < -threshold && getCostSiteString(scaPrintDecision[i])=="P"){
-                IncorrectPIMDecision << std::setw(7) << i
+                IncorrectPIMDecision << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -475,10 +476,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 auto *pimstats = sorted[PIM][i];
                 COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
                 if(diff > threshold && getCostSiteString(scaPrintDecision[i])=="C"){
-                    IncorrectCPUDecision << std::setw(7) << i
+                    IncorrectCPUDecision << std::setw(7) << std::dec << i
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                    << std::setw(14) << pimstats->parallelism()
+                    << std::setw(14) << std::dec << pimstats->parallelism()
                     << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
                     << std::setw(15) << pimstats->MaxElapsedTime()
@@ -491,10 +492,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                     potential += std::abs(diff);
                 }
                 if(diff < -threshold && getCostSiteString(scaPrintDecision[i])=="P"){
-                    IncorrectPIMDecision << std::setw(7) << i
+                    IncorrectPIMDecision << std::setw(7) << std::dec <<  i
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                    << std::setw(14) << pimstats->parallelism()
+                    << std::setw(14) << std::dec << pimstats->parallelism()
                     << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
                     << std::setw(15) << pimstats->MaxElapsedTime()
@@ -518,10 +519,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             auto *cpustats = sorted[CPU][i];
             auto *pimstats = sorted[PIM][i];
             COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
-            ofs << std::setw(7) << i
+            ofs << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -534,7 +535,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setfill(' ') << std::endl;
                 sumofShowBBTime += key;
         }
-        ofs << "ShowBBTime: " << sumofShowBBTime*100/PIMProfCost << " %";
+        ofs << "ShowBBTime: " << sumofShowBBTime*100/PIMProfCost << " %" << std::endl;
         // Print top10SCABB[] = i;
         ofs << HORIZONTAL_LINE << std::endl;
         ofs << "top10SCABB" << std::endl;
@@ -545,10 +546,10 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             auto *cpustats = sorted[CPU][i];
             auto *pimstats = sorted[PIM][i];
             COST diff = cpustats->MaxElapsedTime() - pimstats->MaxElapsedTime();
-            ofs << std::setw(7) << i
+            ofs << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
-                << std::setw(14) << pimstats->parallelism()
+                << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
                 << std::setw(15) << pimstats->MaxElapsedTime()
@@ -561,7 +562,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 << std::setfill(' ') << std::endl;
                 sumofShowBBTime += key;
         }
-        ofs << "ShowBBTime: " << sumofShowBBTime*100/scaCost << " %";
+        ofs << "ShowBBTime: " << sumofShowBBTime*100/scaCost << " %" << std::endl;
         // Print IncorrectCPUDecision
         ofs << HORIZONTAL_LINE << std::endl;
         ofs << "IncorrectCPUDecision" << std::endl;
@@ -1408,7 +1409,7 @@ void CostSolver::TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, cons
             if(delta > 1e+6)
                 ofs << "cost delta: " << delta 
                 << " diffBBLIDs: " 
-                << diffBBLIDs.first 
+                << std::dec << diffBBLIDs.first 
                 << " to " << diffBBLIDs.second << std::endl;
         }
     }
