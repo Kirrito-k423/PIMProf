@@ -108,14 +108,14 @@ enum VTUNE_MODE {
 */
 enum CostSite {
     CPU, PIM, MAX_COST_SITE,
-    NOTPIM, ALL,
+    NOTPIM, ALL, Follower,
     DEFAULT = 0x0fffffff,
     INVALID = 0x3fffffff // a placeholder that does not count as a cost site
 };
 
 const std::string CostSiteString[] {
     "C", "P", "M",
-    "N", "A",
+    "N", "A", "F",
     "D",
     "I"
 };

@@ -117,10 +117,10 @@ void CostSolver::ParseDecision(std::istream &ifs)
 {
     std::string line, token;
     // int tid = 0;
-    CostSite preStatus=CostSite::PIM;
-    int preCycles = 0;
-    CostSite hugeStatus=CostSite::PIM;
-    int preHugeCycles = 0;
+    // CostSite preStatus=CostSite::PIM;
+    // int preCycles = 0;
+    // CostSite hugeStatus=CostSite::PIM;
+    // int preHugeCycles = 0;
     // int stickTimes = 0;
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
@@ -132,34 +132,35 @@ void CostSolver::ParseDecision(std::istream &ifs)
             >> value >> std::dec >> curCycles;
         // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
         // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        if(curCycles > 0 && curCycles < 100){
-            scaDecision[keyUUID]=hugeStatus;
-        }else if(preCycles > 4 *curCycles){
-            scaDecision[keyUUID]=preStatus;
+        // if(curCycles > 0 && curCycles < 50){
+        //     scaDecision[keyUUID]=hugeStatus;
+        // }else if(preCycles > 4 *curCycles){
+        //     scaDecision[keyUUID]=preStatus;
         // After applying the decision tree, the continuity has been disrupted.
         // }else if(stickTimes >= 5 && curCycles < 250){
         //     scaDecision[keyUUID]=preStatus;
         //     stickTimes=0;
-        }else if(value=="PIM"){
+        // }else 
+        if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
         }else if(value=="Follower"){
-            scaDecision[keyUUID]=preStatus;
+            scaDecision[keyUUID]=CostSite::Follower;
         }else if(value=="CPU"){
             scaDecision[keyUUID]=CostSite::CPU;
         }else{
             assert(false);
         }  
-        preCycles=curCycles;
+        // preCycles=curCycles;
         // if(preStatus==scaDecision[keyUUID]){
         //     stickTimes++;
         // }else{
         //     stickTimes=0;
         // }
-        preStatus=scaDecision[keyUUID];
-        if(curCycles > 2000){
-            hugeStatus =  scaDecision[keyUUID];
-            preHugeCycles = curCycles;
-        }
+        // preStatus=scaDecision[keyUUID];
+        // if(curCycles > 2000){
+        //     hugeStatus =  scaDecision[keyUUID];
+        //     preHugeCycles = curCycles;
+        // }
     }
 }
 
@@ -249,14 +250,17 @@ void CostSolver::ParseReuse(std::istream &ifs, DataReuse<BBLID> &reuse, SwitchCo
         if (isreusesegment) {
             std::stringstream ss(line);
             BBLIDDataReuseSegment seg;
-            ss >> token >> token >> token;
-            BBLID head = std::stoi(token.substr(0, token.size() - 1));
+            ss >> token >> token >> token; // example: head = 208,
+            BBLID head = std::stoi(token.substr(0, token.size() - 1)); //example:  208,
             int64_t count;
-            ss >> token >> token >> count;
+            ss >> token >> token >> count; //example: count = 4
             ss >> token;
             BBLID bblid;
+            BBLID prebblid = head;
             while (ss >> bblid) {
                 seg.insert(bblid);
+                interBB_CL_DM[{std::min(bblid,prebblid),std::max(bblid,prebblid)}]+=count;
+                prebblid = bblid;
             }
             seg.setHead(head);
             if (count < 0) {
@@ -322,6 +326,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
             }
         }
         minSCAResult.print(ofs);
+        redecideSCAByCLDM(scaPrintDecision, ofs);
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -375,6 +380,16 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
 //     }
 //     return ofs;
 // }
+
+void CostSolver::redecideSCAByCLDM(DECISION &scaPrintDecision, std::ostream &ofs){
+    ofs << HORIZONTAL_LINE << std::endl;
+    ofs << "Re-decide SCA decision by cache-line data movement" << getCostSiteString(scaPrintDecision[0]) << std::endl;
+    // cluster top 10 Cache line data move, Decide follows static decision if others is Follower, conflict whatever for now
+    // 
+    TopReuseBBPairs(ofs);
+    
+
+}
 
 std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &decision, const DECISION &scaPrintDecision, bool toscreen)
 {
@@ -629,6 +644,7 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
 DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
     DECISION decision;
+    CostSite preCostSite = CostSite::PIM;
     for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
         auto *cpustats = sorted[CPU][i];
         auto *pimstats = sorted[PIM][i];
@@ -640,10 +656,15 @@ DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, st
                 decision.push_back(PIM);
             }
         }else if(decisionFromFile.count(cpustats->bblhash)){
-            decision.push_back(decisionFromFile[cpustats->bblhash]);
+            auto tmpdecide = decisionFromFile[cpustats->bblhash];
+            if(tmpdecide==CostSite::Follower)
+                decision.push_back(preCostSite);
+            else
+                decision.push_back(tmpdecide);
         }else{
             decision.push_back(CostSite::CPU);
         }
+        preCostSite = *decision.rbegin();
     }
     COST reuse_cost = ReuseCost(decision, _bbl_data_reuse.getRoot());
     COST switch_cost = SwitchCost(decision, _bbl_switch_count);
@@ -1341,6 +1362,33 @@ COST CostSolver::ReuseCost(const DECISION &decision, const BBLIDTrieNode *reuset
         TrieBFS(cur_reuse_cost, decision, elem.first, elem.second, false);
     }
     return cur_reuse_cost;
+}
+
+struct Compare {
+    template<typename T1, typename T2>
+    bool operator()(const std::pair<T1, T2>& p1, const std::pair<T1, T2>& p2) const {
+        return p1.second > p2.second; // 按照 p1 的值大于 p2 的值进行排序
+    }
+};
+
+void CostSolver::TopReuseBBPairs(std::ostream &ofs)
+{
+    std::vector<std::pair<std::pair<BBLID,BBLID>,COST>> vec(interBB_CL_DM.begin(), interBB_CL_DM.end());
+    sort(vec.begin(),vec.end(),Compare());
+    const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
+
+    int flag = 0;
+    for (const auto& pair : vec) {
+        if(flag++>10) break;
+        auto &bblIndex1 = pair.first.first;
+        auto &bblIndex2 = pair.first.second;
+        ofs << "Cost: " << std::setw(7) << pair.second << 
+            " pair: " << bblIndex1 << " <-> "
+            << bblIndex2 << 
+            " sca: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
+            << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
+            << std::endl;
+    }
 }
 
 void CostSolver::TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent)
