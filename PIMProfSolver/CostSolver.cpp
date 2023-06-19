@@ -327,6 +327,8 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         }
         minSCAResult.print(ofs);
         redecideSCAByCLDM(scaPrintDecision, ofs);
+        ofs << " Test2:" << getCostSiteString(scaPrintDecision[7])
+            << std::endl;  
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -386,8 +388,9 @@ void CostSolver::redecideSCAByCLDM(DECISION &scaPrintDecision, std::ostream &ofs
     ofs << "Re-decide SCA decision by cache-line data movement" << getCostSiteString(scaPrintDecision[0]) << std::endl;
     // cluster top 10 Cache line data move, Decide follows static decision if others is Follower, conflict whatever for now
     // 
-    TopReuseBBPairs(ofs);
-    
+    TopReuseBBPairs(scaPrintDecision, ofs);
+    ofs << " Test:" << getCostSiteString(scaPrintDecision[7])
+            << std::endl;  
 
 }
 
@@ -1371,15 +1374,15 @@ struct Compare {
     }
 };
 
-void CostSolver::TopReuseBBPairs(std::ostream &ofs)
+void CostSolver::TopReuseBBPairs(DECISION &decision, std::ostream &ofs)
 {
     std::vector<std::pair<std::pair<BBLID,BBLID>,COST>> vec(interBB_CL_DM.begin(), interBB_CL_DM.end());
     sort(vec.begin(),vec.end(),Compare());
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
 
-    int flag = 0;
-    for (const auto& pair : vec) {
-        if(flag++>10) break;
+    assert(vec.size()>10);
+    for (int i = 10; i>=0; i--) {
+        auto &pair = vec[i];
         auto &bblIndex1 = pair.first.first;
         auto &bblIndex2 = pair.first.second;
         ofs << "Cost: " << std::setw(7) << pair.second << 
@@ -1388,7 +1391,40 @@ void CostSolver::TopReuseBBPairs(std::ostream &ofs)
             " sca: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
             << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
             << std::endl;
+        auto *cpustats1 = sorted[CPU][bblIndex1];
+        auto *pimstats1 = sorted[PIM][bblIndex1];
+        auto *cpustats2 = sorted[CPU][bblIndex2];
+        auto *pimstats2 = sorted[PIM][bblIndex2];
+        COST diff1 = cpustats1->MaxElapsedTime() - pimstats1->MaxElapsedTime();
+        COST diff2 = cpustats2->MaxElapsedTime() - pimstats2->MaxElapsedTime();
+        COST CL_DM = pair.second * (_flush_cost[CPU] + _fetch_cost[PIM]);
+        
+        // Only for Union size less than 2:
+        // Utilize cost-benefit analysis to replace combinatorial iteration for finding the minimum scenario.
+        if(diff1 >= 0 && diff2 >= 0){
+            decision[bblIndex1] = CostSite::PIM;
+            decision[bblIndex2] = CostSite::PIM;
+        }else if(diff1 <= 0 && diff2 <= 0){
+            decision[bblIndex1] = CostSite::CPU;
+            decision[bblIndex2] = CostSite::CPU;
+        }else if(std::abs(diff1) > CL_DM && std::abs(diff2) > CL_DM){
+            decision[bblIndex1] = (diff1 > 0)?CostSite::PIM:CostSite::CPU;
+            decision[bblIndex2] = (diff2 > 0)?CostSite::PIM:CostSite::CPU;
+        }else{
+            bool tmp = (std::abs(diff1)>std::abs(diff2))?(diff1 > 0):(diff2 > 0);
+            decision[bblIndex1] = (tmp)?CostSite::PIM:CostSite::CPU;
+            decision[bblIndex2] = (tmp)?CostSite::PIM:CostSite::CPU;
+        }
+        ofs << " re-sca: " << 
+            getCostSiteString(decision[bblIndex1]) << " <-> "
+            << getCostSiteString(decision[bblIndex2])
+            << std::endl;  
+        ofs << " Diff1: " << std::setw(15) << diff1 << 
+            "\n Diff2: " << std::setw(15) << diff2 << 
+            "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
+            "\n Cache line DM: " << CL_DM << std::endl;
     }
+
 }
 
 void CostSolver::TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent)

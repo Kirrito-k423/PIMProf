@@ -224,7 +224,7 @@ class CostSolver {
     COST SwitchCost(const DECISION &decision, const SwitchCountList &switchcnt);
     std::vector<BBCOUNT> bbTimesFromSwitchInfo(const DECISION &decision, const SwitchCountList &switchcnt);
     COST ReuseCost(const DECISION &decision, const BBLIDTrieNode *reusetree);
-    void TopReuseBBPairs(std::ostream &ofs);
+    void TopReuseBBPairs(DECISION &decision, std::ostream &ofs);
     void TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent);
     COST ReuseCostPrint(const DECISION &decision, const BBLIDTrieNode *reusetree, std::ostream &ofs);
     void TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent, std::pair<BBLID,BBLID> diffBBLIDs , std::ostream &ofs);
