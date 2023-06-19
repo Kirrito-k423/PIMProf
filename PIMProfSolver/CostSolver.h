@@ -165,6 +165,7 @@ class CostSolver {
     CommandLineParser *_command_line_parser;
     // Cache line Data Movement between BBLs
     std::map<std::pair<BBLID,BBLID>, COST> interBB_CL_DM;
+    std::stringstream delayCout;
 
     // instance of get_id function, prototype:
     // BBLID get_id(Ty elem);
@@ -224,14 +225,14 @@ class CostSolver {
     COST SwitchCost(const DECISION &decision, const SwitchCountList &switchcnt);
     std::vector<BBCOUNT> bbTimesFromSwitchInfo(const DECISION &decision, const SwitchCountList &switchcnt);
     COST ReuseCost(const DECISION &decision, const BBLIDTrieNode *reusetree);
-    void TopReuseBBPairs(DECISION &decision, std::ostream &ofs);
+    void TopReuseBBPairs(DECISION &decision);
     void TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent);
     COST ReuseCostPrint(const DECISION &decision, const BBLIDTrieNode *reusetree, std::ostream &ofs);
     void TrieBFS(COST &cost, const DECISION &decision, BBLID bblid, const BBLIDTrieNode *root, bool isDifferent, std::pair<BBLID,BBLID> diffBBLIDs , std::ostream &ofs);
 
     void ReadConfig(ConfigReader &reader);
 
-    void redecideSCAByCLDM(DECISION &scaPrintDecision, std::ostream &ofs);
+    void redecideSCAByCLDM(DECISION &scaPrintDecision);
     std::ostream &PrintDecision(std::ostream &out, const DECISION &decision, const DECISION &scaPrintDecision , bool toscreen);
     // std::ostream &PrintDecisionStat(std::ostream &out, const DECISION &decision, const std::string &name);
     // std::ostream &PrintCostBreakdown(std::ostream &out, const DECISION &decision, const std::string &name);

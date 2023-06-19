@@ -326,9 +326,6 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
             }
         }
         minSCAResult.print(ofs);
-        redecideSCAByCLDM(scaPrintDecision, ofs);
-        ofs << " Test2:" << getCostSiteString(scaPrintDecision[7])
-            << std::endl;  
     }
     if (_command_line_parser->mode() == CommandLineParser::Mode::DEBUG) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -337,6 +334,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
     }
 
     PrintDecision(ofs, decision, scaPrintDecision, false);
+    ofs << delayCout.str();
 
     return decision;
 }
@@ -383,14 +381,13 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
 //     return ofs;
 // }
 
-void CostSolver::redecideSCAByCLDM(DECISION &scaPrintDecision, std::ostream &ofs){
+void CostSolver::redecideSCAByCLDM(DECISION &scaPrintDecision){
+    auto &ofs = delayCout;
     ofs << HORIZONTAL_LINE << std::endl;
     ofs << "Re-decide SCA decision by cache-line data movement" << getCostSiteString(scaPrintDecision[0]) << std::endl;
     // cluster top 10 Cache line data move, Decide follows static decision if others is Follower, conflict whatever for now
     // 
-    TopReuseBBPairs(scaPrintDecision, ofs);
-    ofs << " Test:" << getCostSiteString(scaPrintDecision[7])
-            << std::endl;  
+    TopReuseBBPairs(scaPrintDecision);
 
 }
 
@@ -669,6 +666,8 @@ DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, st
         }
         preCostSite = *decision.rbegin();
     }
+    redecideSCAByCLDM(decision);
+
     COST reuse_cost = ReuseCost(decision, _bbl_data_reuse.getRoot());
     COST switch_cost = SwitchCost(decision, _bbl_switch_count);
     auto elapsed_time = ElapsedTime(decision);
@@ -1374,8 +1373,9 @@ struct Compare {
     }
 };
 
-void CostSolver::TopReuseBBPairs(DECISION &decision, std::ostream &ofs)
+void CostSolver::TopReuseBBPairs(DECISION &decision)
 {
+    auto &ofs = delayCout;
     std::vector<std::pair<std::pair<BBLID,BBLID>,COST>> vec(interBB_CL_DM.begin(), interBB_CL_DM.end());
     sort(vec.begin(),vec.end(),Compare());
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
