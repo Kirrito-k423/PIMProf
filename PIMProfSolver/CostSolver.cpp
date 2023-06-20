@@ -64,8 +64,8 @@ void CostSolver::initialize(CommandLineParser *parser)
     _flush_cost[CostSite::PIM] = 30;
     _fetch_cost[CostSite::CPU] = 60;
     _fetch_cost[CostSite::PIM] = 30;
-    _switch_cost[CostSite::CPU] = 0;
-    _switch_cost[CostSite::PIM] = 0;
+    _switch_cost[CostSite::CPU] = 60;
+    _switch_cost[CostSite::PIM] = 60;
     _mpki_threshold = 5;
     _parallelism_threshold = 15;
     _batch_threshold = 0.001;
@@ -280,6 +280,7 @@ void CostSolver::ParseReuse(std::istream &ifs, DataReuse<BBLID> &reuse, SwitchCo
                 BBLID toidx = stoull(token.substr(0, delim));
                 uint64_t count = stoull(token.substr(delim + 1));
                 
+                interBB_REG_DM[{std::min(fromidx,toidx),std::max(fromidx,toidx)}]+=count;
                 toidxvec.push_back(std::make_pair(toidx, count));
             }
             switchcnt.RowInsert(fromidx, toidxvec);
@@ -454,6 +455,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 IncorrectCPUDecision << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(12) << getCostSiteString(scaDecision[cpustats->bblhash])
                 << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
@@ -470,6 +472,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                 IncorrectPIMDecision << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(12) << getCostSiteString(scaDecision[cpustats->bblhash])
                 << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
@@ -494,6 +497,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                     IncorrectCPUDecision << std::setw(7) << std::dec << i
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                    << std::setw(12) << getCostSiteString(scaDecision[cpustats->bblhash])
                     << std::setw(14) << std::dec << pimstats->parallelism()
                     << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
@@ -510,6 +514,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
                     IncorrectPIMDecision << std::setw(7) << std::dec <<  i
                     << std::setw(10) << getCostSiteString(decision[i])
                     << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                    << std::setw(12) << getCostSiteString(scaDecision[cpustats->bblhash])
                     << std::setw(14) << std::dec << pimstats->parallelism()
                     << std::setw(14) << std::dec << bbcount[i]
                     << std::setw(15) << cpustats->MaxElapsedTime()
@@ -1376,28 +1381,38 @@ struct Compare {
 void CostSolver::TopReuseBBPairs(DECISION &decision)
 {
     auto &ofs = delayCout;
-    std::vector<std::pair<std::pair<BBLID,BBLID>,COST>> vec(interBB_CL_DM.begin(), interBB_CL_DM.end());
+    //calculate total COST based on interBB_CL_DM and interBB_REG_DM
+    std::map<std::pair<BBLID,BBLID>, COST> interBBTotalCost;
+    for(auto &datamove: interBB_CL_DM){
+        interBBTotalCost[datamove.first] += datamove.second * (_flush_cost[CPU] + _fetch_cost[PIM]);
+    }
+    for(auto &datamove: interBB_REG_DM){
+        interBBTotalCost[datamove.first] += datamove.second * (_switch_cost[CPU]);
+    }
+    std::vector<std::pair<std::pair<BBLID,BBLID>,COST>> vec(interBBTotalCost.begin(), interBBTotalCost.end());
     sort(vec.begin(),vec.end(),Compare());
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
 
     assert(vec.size()>10);
-    for (int i = 10; i>=0; i--) {
+    for (int i = vec.size()-1; i>=0; i--) {
         auto &pair = vec[i];
         auto &bblIndex1 = pair.first.first;
         auto &bblIndex2 = pair.first.second;
-        ofs << "Cost: " << std::setw(7) << pair.second << 
-            " pair: " << bblIndex1 << " <-> "
-            << bblIndex2 << 
-            " sca: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
-            << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
-            << std::endl;
+        if(i<10)
+            ofs << "Cost: " << std::setw(7) << pair.second << 
+                " pair: " << bblIndex1 << " <-> "
+                << bblIndex2 << 
+                " sca: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
+                << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
+                << std::endl;
         auto *cpustats1 = sorted[CPU][bblIndex1];
         auto *pimstats1 = sorted[PIM][bblIndex1];
         auto *cpustats2 = sorted[CPU][bblIndex2];
         auto *pimstats2 = sorted[PIM][bblIndex2];
         COST diff1 = cpustats1->MaxElapsedTime() - pimstats1->MaxElapsedTime();
         COST diff2 = cpustats2->MaxElapsedTime() - pimstats2->MaxElapsedTime();
-        COST CL_DM = pair.second * (_flush_cost[CPU] + _fetch_cost[PIM]);
+        // COST CL_DM = pair.second * (_flush_cost[CPU] + _fetch_cost[PIM]);
+        COST totalCost = pair.second;
         
         // Only for Union size less than 2:
         // Utilize cost-benefit analysis to replace combinatorial iteration for finding the minimum scenario.
@@ -1407,7 +1422,7 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         }else if(diff1 <= 0 && diff2 <= 0){
             decision[bblIndex1] = CostSite::CPU;
             decision[bblIndex2] = CostSite::CPU;
-        }else if(std::abs(diff1) > CL_DM && std::abs(diff2) > CL_DM){
+        }else if(std::abs(diff1) > totalCost && std::abs(diff2) > totalCost){
             decision[bblIndex1] = (diff1 > 0)?CostSite::PIM:CostSite::CPU;
             decision[bblIndex2] = (diff2 > 0)?CostSite::PIM:CostSite::CPU;
         }else{
@@ -1415,14 +1430,16 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
             decision[bblIndex1] = (tmp)?CostSite::PIM:CostSite::CPU;
             decision[bblIndex2] = (tmp)?CostSite::PIM:CostSite::CPU;
         }
-        ofs << " re-sca: " << 
-            getCostSiteString(decision[bblIndex1]) << " <-> "
-            << getCostSiteString(decision[bblIndex2])
-            << std::endl;  
-        ofs << " Diff1: " << std::setw(15) << diff1 << 
-            "\n Diff2: " << std::setw(15) << diff2 << 
-            "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
-            "\n Cache line DM: " << CL_DM << std::endl;
+        if(i<10){
+            ofs << " re-sca: " << 
+                getCostSiteString(decision[bblIndex1]) << " <-> "
+                << getCostSiteString(decision[bblIndex2])
+                << std::endl;  
+            ofs << " Diff1: " << std::setw(15) << diff1 << 
+                "\n Diff2: " << std::setw(15) << diff2 << 
+                "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
+                "\n totalCost: " << totalCost << std::endl;
+        }
     }
 
 }

@@ -165,6 +165,8 @@ class CostSolver {
     CommandLineParser *_command_line_parser;
     // Cache line Data Movement between BBLs
     std::map<std::pair<BBLID,BBLID>, COST> interBB_CL_DM;
+    // Reg-Dependence Data Movement between BBLs
+    std::map<std::pair<BBLID,BBLID>, COST> interBB_REG_DM;
     std::stringstream delayCout;
 
     // instance of get_id function, prototype:
