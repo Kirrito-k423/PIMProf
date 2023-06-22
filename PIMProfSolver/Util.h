@@ -48,6 +48,27 @@ class DisjointSet {
     }
 };
 
+
+class PairInt {
+public:
+    int first;
+    int second;
+    
+    PairInt() : first(0), second(0) {}  // 默认构造函数设置默认值
+    
+    PairInt(int f, int s) : first(f), second(s) {}  // 自定义构造函数
+    
+    PairInt& operator+=(const PairInt& other) {
+        first += other.first;
+        second += other.second;
+        return *this;
+    }
+    
+    static PairInt make_pair(int f, int s) {
+        return PairInt(f, s);
+    }
+};
+
 /* ===================================================================== */
 /* BBLScope */
 /* ===================================================================== */

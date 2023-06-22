@@ -1393,12 +1393,43 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
     sort(vec.begin(),vec.end(),Compare());
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
 
-    assert(vec.size()>10);
+    // get the union set
+    DisjointSet ds;
+    std::set<BBLID> toRedecideBBL;
+    COST top1DataCost = vec[0].second;
     for (int i = vec.size()-1; i>=0; i--) {
         auto &pair = vec[i];
         auto &bblIndex1 = pair.first.first;
         auto &bblIndex2 = pair.first.second;
-        if(i<10)
+        toRedecideBBL.insert(bblIndex1);
+        toRedecideBBL.insert(bblIndex2);
+        COST totalCost = pair.second;
+        // erase most data cost 
+        if(totalCost < 0.01 * top1DataCost) continue;
+        ds.Union(bblIndex1, bblIndex2);
+    }
+
+    // Union CPU & PIM decision count
+    std::map<BBLID, PairInt> dsCount;
+    for(auto &bbl : toRedecideBBL){
+        dsCount[ds.Find(bbl)] += (scaDecision[sorted[CPU][bbl]->bblhash] == CostSite::PIM)?
+                        PIMProf::PairInt::make_pair(1,0):PIMProf::PairInt::make_pair(0,1);
+    }
+
+    //cluster 2 PIM
+    for(auto &bbl : toRedecideBBL){
+        if(dsCount[ds.Find(bbl)].first > 0){
+            decision[bbl] = CostSite::PIM;
+        }
+    }
+
+    for (int i = vec.size()-1; i>=0; i--) {
+        auto &pair = vec[i];
+        auto &bblIndex1 = pair.first.first;
+        auto &bblIndex2 = pair.first.second;
+        COST totalCost = pair.second;    
+        if(totalCost < 0.01 * top1DataCost) continue;
+        // if(i<10)
             ofs << "Cost: " << std::setw(7) << pair.second << 
                 " pair: " << bblIndex1 << " <-> "
                 << bblIndex2 << 
@@ -1412,34 +1443,44 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         COST diff1 = cpustats1->MaxElapsedTime() - pimstats1->MaxElapsedTime();
         COST diff2 = cpustats2->MaxElapsedTime() - pimstats2->MaxElapsedTime();
         // COST CL_DM = pair.second * (_flush_cost[CPU] + _fetch_cost[PIM]);
-        COST totalCost = pair.second;
         
         // Only for Union size less than 2:
         // Utilize cost-benefit analysis to replace combinatorial iteration for finding the minimum scenario.
-        if(diff1 >= 0 && diff2 >= 0){
-            decision[bblIndex1] = CostSite::PIM;
-            decision[bblIndex2] = CostSite::PIM;
-        }else if(diff1 <= 0 && diff2 <= 0){
-            decision[bblIndex1] = CostSite::CPU;
-            decision[bblIndex2] = CostSite::CPU;
-        }else if(std::abs(diff1) > totalCost && std::abs(diff2) > totalCost){
-            decision[bblIndex1] = (diff1 > 0)?CostSite::PIM:CostSite::CPU;
-            decision[bblIndex2] = (diff2 > 0)?CostSite::PIM:CostSite::CPU;
-        }else{
-            bool tmp = (std::abs(diff1)>std::abs(diff2))?(diff1 > 0):(diff2 > 0);
-            decision[bblIndex1] = (tmp)?CostSite::PIM:CostSite::CPU;
-            decision[bblIndex2] = (tmp)?CostSite::PIM:CostSite::CPU;
-        }
-        if(i<10){
+        // if(diff1 >= 0 && diff2 >= 0){
+        //     decision[bblIndex1] = CostSite::PIM;
+        //     decision[bblIndex2] = CostSite::PIM;
+        // }else if(diff1 <= 0 && diff2 <= 0){
+        //     decision[bblIndex1] = CostSite::CPU;
+        //     decision[bblIndex2] = CostSite::CPU;
+        // }else if(std::abs(diff1) > totalCost && std::abs(diff2) > totalCost){
+        //     decision[bblIndex1] = (diff1 > 0)?CostSite::PIM:CostSite::CPU;
+        //     decision[bblIndex2] = (diff2 > 0)?CostSite::PIM:CostSite::CPU;
+        // }else{
+        //     bool tmp = (std::abs(diff1)>std::abs(diff2))?(diff1 > 0):(diff2 > 0);
+        //     decision[bblIndex1] = (tmp)?CostSite::PIM:CostSite::CPU;
+        //     decision[bblIndex2] = (tmp)?CostSite::PIM:CostSite::CPU;
+        // }
+
+        // Each pair judge if Cluster to PIM
+        // CostSite &scaPreliminary1 = scaDecision[cpustats1->bblhash];
+        // CostSite &scaPreliminary2 = scaDecision[cpustats2->bblhash];
+        // if(scaPreliminary1 == CostSite::PIM || scaPreliminary2 == CostSite::PIM ){
+        //     decision[bblIndex1] = CostSite::PIM;
+        //     decision[bblIndex2] = CostSite::PIM;
+        // }else{
+        //     decision[bblIndex1] = CostSite::CPU;
+        //     decision[bblIndex2] = CostSite::CPU;
+        // }
+        // if(i<10){
             ofs << " re-sca: " << 
                 getCostSiteString(decision[bblIndex1]) << " <-> "
                 << getCostSiteString(decision[bblIndex2])
                 << std::endl;  
             ofs << " Diff1: " << std::setw(15) << diff1 << 
                 "\n Diff2: " << std::setw(15) << diff2 << 
-                "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
+                // "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
                 "\n totalCost: " << totalCost << std::endl;
-        }
+        // }
     }
 
 }
