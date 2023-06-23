@@ -64,8 +64,9 @@ void CostSolver::initialize(CommandLineParser *parser)
     _flush_cost[CostSite::PIM] = 30;
     _fetch_cost[CostSite::CPU] = 60;
     _fetch_cost[CostSite::PIM] = 30;
-    _switch_cost[CostSite::CPU] = 60;
-    _switch_cost[CostSite::PIM] = 60;
+    _switch_cost[CostSite::CPU] = 2000;
+    _switch_cost[CostSite::PIM] = 2000;
+    _dataMoveThreshold = _command_line_parser->dataMoveThreshold;
     _mpki_threshold = 5;
     _parallelism_threshold = 15;
     _batch_threshold = 0.001;
@@ -417,6 +418,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         std::vector<BBCOUNT> bbcount = bbTimesFromSwitchInfo(decision, _bbl_switch_count);
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
+            << std::setw(12) << "Re-scaDecision"
             << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -433,6 +435,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             ofs << std::setw(7) << std::dec << i
                 << std::setw(10) << getCostSiteString(decision[i])
                 << std::setw(12) << getCostSiteString(scaPrintDecision[i])
+                << std::setw(12) << getCostSiteString(scaDecision[cpustats->bblhash])
                 << std::setw(14) << std::dec << pimstats->parallelism()
                 << std::setw(14) << std::dec << bbcount[i]
                 << std::setw(15) << cpustats->MaxElapsedTime()
@@ -1405,7 +1408,7 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         toRedecideBBL.insert(bblIndex2);
         COST totalCost = pair.second;
         // erase most data cost 
-        if(totalCost < 0.01 * top1DataCost) continue;
+        if(totalCost < _dataMoveThreshold * top1DataCost) continue;
         ds.Union(bblIndex1, bblIndex2);
     }
 
@@ -1420,6 +1423,9 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
     for(auto &bbl : toRedecideBBL){
         if(dsCount[ds.Find(bbl)].first > 0){
             decision[bbl] = CostSite::PIM;
+        }else{
+            // deal with scaDecision == CostSite::Follower
+            decision[bbl] = CostSite::CPU;
         }
     }
 
@@ -1428,7 +1434,7 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         auto &bblIndex1 = pair.first.first;
         auto &bblIndex2 = pair.first.second;
         COST totalCost = pair.second;    
-        if(totalCost < 0.01 * top1DataCost) continue;
+        if(totalCost < _dataMoveThreshold * top1DataCost) continue;
         // if(i<10)
             ofs << "Cost: " << std::setw(7) << pair.second << 
                 " pair: " << bblIndex1 << " <-> "

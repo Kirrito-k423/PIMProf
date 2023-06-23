@@ -37,6 +37,8 @@ void CommandLineParser::initialize(int argc, char *argv[])
                 _reusefile = std::string(optarg); std::cout << "reuse " << _reusefile << std::endl; break;
             case 'o':
                 _outputfile = std::string(optarg); std::cout << "output " << _outputfile << std::endl; break;
+            case 'd':
+                dataMoveThreshold = std::stoi(std::string(optarg)); std::cout << "dataMoveThreshold " << dataMoveThreshold << std::endl; break;
             case 'h': // -h or --help
             case '?': // Unrecognized option
             default:
@@ -71,13 +73,14 @@ void CommandLineParser::initialize(int argc, char *argv[])
     }
     else if (_mode_string == "reuse") {
         _mode = Mode::REUSE;
-        const char* const short_opt = "s:c:p:r:o:h";
+        const char* const short_opt = "s:c:p:r:o:d:h";
         const option long_opt[] = {
             {"sca", required_argument, nullptr, 's'},
             {"cpu", required_argument, nullptr, 'c'},
             {"pim", required_argument, nullptr, 'p'},
             {"reuse", required_argument, nullptr, 'r'},
-            {"output", required_argument, nullptr, 'o'},   
+            {"output", required_argument, nullptr, 'o'}, 
+            {"data", no_argument, nullptr, 'd'},  
             {"help", no_argument, nullptr, 'h'},
             {nullptr, no_argument, nullptr, 0}
         };

@@ -197,6 +197,7 @@ class CostSolver {
     COST _switch_cost[MAX_COST_SITE];
 
     double _batch_threshold;
+    double _dataMoveThreshold;
     int _batch_size;
     int _mpki_threshold;
     int _parallelism_threshold;

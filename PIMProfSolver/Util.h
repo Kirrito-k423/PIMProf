@@ -124,6 +124,7 @@ PRETTY_PRINT_FUNC_HELPER(warning, YELLOWCOLOR)
 
 class CommandLineParser {
   public:
+    double dataMoveThreshold = 0.01;
     enum Mode {
         MPKI, PARA, REUSE, DEBUG
     };
@@ -132,6 +133,7 @@ class CommandLineParser {
     std::string _reusefile;
     std::string _outputfile;
     Mode _mode;
+    
 
   public:
     void initialize(int argc, char *argv[]);
