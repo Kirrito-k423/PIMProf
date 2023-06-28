@@ -386,7 +386,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
 void CostSolver::redecideSCAByCLDM(DECISION &scaPrintDecision){
     auto &ofs = delayCout;
     ofs << HORIZONTAL_LINE << std::endl;
-    ofs << "Re-decide SCA decision by cache-line data movement" << getCostSiteString(scaPrintDecision[0]) << std::endl;
+    ofs << "Re-decide SCA decision by cache-line data movement" << std::endl;
     // cluster top 10 Cache line data move, Decide follows static decision if others is Follower, conflict whatever for now
     // 
     TopReuseBBPairs(scaPrintDecision);
@@ -1404,24 +1404,46 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         auto &pair = vec[i];
         auto &bblIndex1 = pair.first.first;
         auto &bblIndex2 = pair.first.second;
-        toRedecideBBL.insert(bblIndex1);
-        toRedecideBBL.insert(bblIndex2);
         COST totalCost = pair.second;
         // erase most data cost 
         if(totalCost < _dataMoveThreshold * top1DataCost) continue;
+        toRedecideBBL.insert(bblIndex1);
+        toRedecideBBL.insert(bblIndex2);
         ds.Union(bblIndex1, bblIndex2);
     }
 
     // Union CPU & PIM decision count
     std::map<BBLID, PairInt> dsCount;
+    // for print different Union
+    std::map<BBLID,std::vector<BBLID>> BBLUnion;
     for(auto &bbl : toRedecideBBL){
         dsCount[ds.Find(bbl)] += (scaDecision[sorted[CPU][bbl]->bblhash] == CostSite::PIM)?
                         PIMProf::PairInt::make_pair(1,0):PIMProf::PairInt::make_pair(0,1);
+        if(BBLUnion.count(ds.Find(bbl))){
+            BBLUnion[ds.Find(bbl)].push_back(bbl);
+        }else{
+            BBLUnion[ds.Find(bbl)]=std::vector<BBLID> {bbl};
+        }
+    }
+
+    // print different Union & its sca manual decision
+    ofs << "DisjointSet: " << std::endl;
+    for(auto &bblSet:BBLUnion ){
+        for(auto &bblId: bblSet.second){
+            ofs << std::setw(3) << bblId << " ";
+        }
+        ofs << std::endl;
+        for(auto &bblId: bblSet.second){
+            ofs << std::setw(3) << getCostSiteString(scaDecision[sorted[CPU][bblId]->bblhash]) << " ";
+        }
+        ofs << std::endl;   
+        ofs << "PIM count in one set: " << dsCount[bblSet.first].first << " " << dsCount[bblSet.first].second << std::endl;  
     }
 
     //cluster 2 PIM
     for(auto &bbl : toRedecideBBL){
-        if(dsCount[ds.Find(bbl)].first > 0){
+        // divide 2 because consider the second value including half CostSite::Follower and CostSite::CPU
+        if(dsCount[ds.Find(bbl)].first >= dsCount[ds.Find(bbl)].second/2){
             decision[bbl] = CostSite::PIM;
         }else{
             // deal with scaDecision == CostSite::Follower
@@ -1436,10 +1458,10 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
         COST totalCost = pair.second;    
         if(totalCost < _dataMoveThreshold * top1DataCost) continue;
         // if(i<10)
-            ofs << "Cost: " << std::setw(7) << pair.second << 
-                " pair: " << bblIndex1 << " <-> "
+            ofs << "Data move Cost: " << std::setw(7) << pair.second << 
+                " id pair : " << bblIndex1 << " <-> "
                 << bblIndex2 << 
-                " sca: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
+                " sca manual decison: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
                 << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
                 << std::endl;
         auto *cpustats1 = sorted[CPU][bblIndex1];
@@ -1482,8 +1504,8 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
                 getCostSiteString(decision[bblIndex1]) << " <-> "
                 << getCostSiteString(decision[bblIndex2])
                 << std::endl;  
-            ofs << " Diff1: " << std::setw(15) << diff1 << 
-                "\n Diff2: " << std::setw(15) << diff2 << 
+            ofs << " Diff(CPU Time - PIM Time) of bbl1: " << std::setw(15) << diff1 << 
+                "\n Diff(CPU Time - PIM Time) of bbl2: " << std::setw(15) << diff2 << 
                 // "\n abs(df1)+abs(df2): " << std::setw(15) << std::abs(diff1)+std::abs(diff2) << 
                 "\n totalCost: " << totalCost << std::endl;
         // }

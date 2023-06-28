@@ -38,7 +38,7 @@ void CommandLineParser::initialize(int argc, char *argv[])
             case 'o':
                 _outputfile = std::string(optarg); std::cout << "output " << _outputfile << std::endl; break;
             case 'd':
-                dataMoveThreshold = std::stoi(std::string(optarg)); std::cout << "dataMoveThreshold " << dataMoveThreshold << std::endl; break;
+                dataMoveThreshold = std::stod(std::string(optarg)); std::cout << "dataMoveThreshold " << dataMoveThreshold << std::endl; break;
             case 'h': // -h or --help
             case '?': // Unrecognized option
             default:
