@@ -428,6 +428,30 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             << std::setw(21) << "Hash(hi)"
             << std::setw(21) << "Hash(lo)"
             << std::endl;
+        IncorrectCPUDecision << std::setw(7) << "BBLID"
+            << std::setw(10) << "Decision"
+            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "scaDecision"
+            << std::setw(14) << "Parallelism"
+            << std::setw(14) << "bbCount"
+            << std::setw(15) << "CPU"
+            << std::setw(15) << "PIM"
+            << std::setw(15) << "Difference"
+            << std::setw(21) << "Hash(hi)"
+            << std::setw(21) << "Hash(lo)"
+            << std::endl;
+        IncorrectPIMDecision << std::setw(7) << "BBLID"
+            << std::setw(10) << "Decision"
+            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "scaDecision"
+            << std::setw(14) << "Parallelism"
+            << std::setw(14) << "bbCount"
+            << std::setw(15) << "CPU"
+            << std::setw(15) << "PIM"
+            << std::setw(15) << "Difference"
+            << std::setw(21) << "Hash(hi)"
+            << std::setw(21) << "Hash(lo)"
+            << std::endl; 
         for (uint32_t i = 0; i < sorted[CPU].size(); i++) {
             auto *cpustats = sorted[CPU][i];
             auto *pimstats = sorted[PIM][i];
@@ -535,6 +559,19 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         // Print top10PIMProfBB[PIMProfBBCost] = i;
         ofs << HORIZONTAL_LINE << std::endl;
         ofs << "top10PIMProfBB" << std::endl;
+        ofs << std::setw(7) << "BBLID"
+            << std::setw(10) << "Decision"
+            << std::setw(12) << "Re-scaDecision"
+            // << std::setw(12) << "scaDecision"
+            << std::setw(14) << "Parallelism"
+            << std::setw(14) << "bbCount"
+            << std::setw(15) << "CPU"
+            << std::setw(15) << "PIM"
+            << std::setw(15) << "Percentage"
+            << std::setw(15) << "Difference"
+            << std::setw(21) << "Hash(hi)"
+            << std::setw(21) << "Hash(lo)"
+            << std::endl;
         COST sumofShowBBTime  = 0;
         for(auto it = top10PIMProfBB.begin(); it != top10PIMProfBB.end(); it++){
             auto key = it->first;
@@ -562,6 +599,19 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         // Print top10SCABB[] = i;
         ofs << HORIZONTAL_LINE << std::endl;
         ofs << "top10SCABB" << std::endl;
+        ofs << std::setw(7) << "BBLID"
+            << std::setw(10) << "Decision"
+            << std::setw(12) << "Re-scaDecision"
+            // << std::setw(12) << "scaDecision"
+            << std::setw(14) << "Parallelism"
+            << std::setw(14) << "bbCount"
+            << std::setw(15) << "CPU"
+            << std::setw(15) << "PIM"
+            << std::setw(15) << "Percentage"
+            << std::setw(15) << "Difference"
+            << std::setw(21) << "Hash(hi)"
+            << std::setw(21) << "Hash(lo)"
+            << std::endl;
         sumofShowBBTime  = 0;
         for(auto it = top10SCABB.begin(); it != top10SCABB.end(); it++){
             auto key = it->first;
