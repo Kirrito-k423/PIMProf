@@ -27,6 +27,8 @@ void CommandLineParser::initialize(int argc, char *argv[])
 
             switch (opt)
             {
+            case 't':
+                _decisionFile = std::string(optarg); std::cout << "cts " << _decisionFile << std::endl; break;
             case 's':
                 _scaDecisionFile = std::string(optarg); std::cout << "sca " << _scaDecisionFile << std::endl; break;
             case 'c':
@@ -73,8 +75,9 @@ void CommandLineParser::initialize(int argc, char *argv[])
     }
     else if (_mode_string == "reuse") {
         _mode = Mode::REUSE;
-        const char* const short_opt = "s:c:p:r:o:d:h";
+        const char* const short_opt = "t:s:c:p:r:o:d:h";
         const option long_opt[] = {
+            {"cts", required_argument, nullptr, 't'},
             {"sca", required_argument, nullptr, 's'},
             {"cpu", required_argument, nullptr, 'c'},
             {"pim", required_argument, nullptr, 'p'},
@@ -85,7 +88,8 @@ void CommandLineParser::initialize(int argc, char *argv[])
             {nullptr, no_argument, nullptr, 0}
         };
         parser(short_opt, long_opt);
-        if (_cpustatsfile == "" || _pimstatsfile == "" || _reusefile == "" || _outputfile == "" || _scaDecisionFile=="") {
+        if (_cpustatsfile == "" || _pimstatsfile == "" || _reusefile == "" || _outputfile == "" || _scaDecisionFile==""
+            || _decisionFile=="") {
             Usage();
         }
     }

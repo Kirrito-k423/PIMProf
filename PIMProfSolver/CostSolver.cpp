@@ -42,13 +42,15 @@ void CostSolver::initialize(CommandLineParser *parser)
     _batch_size = 0;
 
     std::ifstream scaDecision(_command_line_parser->scaDecisionFile());
+    std::ifstream decision(_command_line_parser->decisionFile());
     std::ifstream cpustats(_command_line_parser->cpustatsfile());
     std::ifstream pimstats(_command_line_parser->pimstatsfile());
     std::ifstream reuse(_command_line_parser->reusefile());
     assert(cpustats.is_open());
     assert(pimstats.is_open());
     assert(reuse.is_open());
-    ParseDecision(scaDecision);
+    ParseDecision(decision);
+    ParseSCADecision(scaDecision);
     ParseStats(cpustats, _bbl_hash2stats[CPU]);
     ParseStats(pimstats, _bbl_hash2stats[PIM]);
     ParseReuse(reuse, _bbl_data_reuse, _bbl_switch_count);
@@ -64,8 +66,8 @@ void CostSolver::initialize(CommandLineParser *parser)
     _flush_cost[CostSite::PIM] = 30;
     _fetch_cost[CostSite::CPU] = 60;
     _fetch_cost[CostSite::PIM] = 30;
-    _switch_cost[CostSite::CPU] = 2000;
-    _switch_cost[CostSite::PIM] = 2000;
+    _switch_cost[CostSite::CPU] = 800;
+    _switch_cost[CostSite::PIM] = 800;
     _dataMoveThreshold = _command_line_parser->dataMoveThreshold;
     _mpki_threshold = 5;
     _parallelism_threshold = 15;
@@ -114,15 +116,32 @@ const std::vector<ThreadRunStats *>* CostSolver::getBBLSortedStats()
     return _bbl_sorted_stats;
 }
 
+
 void CostSolver::ParseDecision(std::istream &ifs)
 {
     std::string line, token;
-    // int tid = 0;
-    // CostSite preStatus=CostSite::PIM;
-    // int preCycles = 0;
-    // CostSite hugeStatus=CostSite::PIM;
-    // int preHugeCycles = 0;
-    // int stickTimes = 0;
+
+    while(std::getline(ifs, line)) {
+        std::stringstream ss(line);
+        UUID keyUUID;
+        std::string value;
+        ss >> std::hex >> keyUUID.first
+            >> std::hex >> keyUUID.second
+            >> value; 
+        if(value=="PIM"){
+            ctsDecision[keyUUID]=CostSite::PIM;
+        }else if(value=="CPU"){
+            ctsDecision[keyUUID]=CostSite::CPU;
+        }else{
+            assert(false);
+        }  
+    }
+}
+
+void CostSolver::ParseSCADecision(std::istream &ifs)
+{
+    std::string line, token;
+
     while(std::getline(ifs, line)) {
         std::stringstream ss(line);
         UUID keyUUID;
@@ -131,17 +150,7 @@ void CostSolver::ParseDecision(std::istream &ifs)
         ss >> std::hex >> keyUUID.first
             >> std::hex >> keyUUID.second
             >> value >> std::dec >> curCycles;
-        // std::cout << keyUUID.first << " " << keyUUID.second <<  " "<< value << " "<< curCycles<< std::endl;
-        // printf("Decision %lx %lx %s\n", keyUUID.first, keyUUID.second, value.c_str());
-        // if(curCycles > 0 && curCycles < 50){
-        //     scaDecision[keyUUID]=hugeStatus;
-        // }else if(preCycles > 4 *curCycles){
-        //     scaDecision[keyUUID]=preStatus;
-        // After applying the decision tree, the continuity has been disrupted.
-        // }else if(stickTimes >= 5 && curCycles < 250){
-        //     scaDecision[keyUUID]=preStatus;
-        //     stickTimes=0;
-        // }else 
+
         if(value=="PIM"){
             scaDecision[keyUUID]=CostSite::PIM;
         }else if(value=="Follower"){
@@ -151,17 +160,6 @@ void CostSolver::ParseDecision(std::istream &ifs)
         }else{
             assert(false);
         }  
-        // preCycles=curCycles;
-        // if(preStatus==scaDecision[keyUUID]){
-        //     stickTimes++;
-        // }else{
-        //     stickTimes=0;
-        // }
-        // preStatus=scaDecision[keyUUID];
-        // if(curCycles > 2000){
-        //     hugeStatus =  scaDecision[keyUUID];
-        //     preHugeCycles = curCycles;
-        // }
     }
 }
 
@@ -299,6 +297,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
 {
     DECISION decision;
     DECISION scaPrintDecision;
+    DECISION ctsPrintDecision;
     
     if (_command_line_parser->mode() == CommandLineParser::Mode::MPKI) {
         ofs << "CPU only time (ns): " << ElapsedTime(CPU) << std::endl
@@ -318,7 +317,8 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         PrintMPKIStats(ofs);
         PrintGreedyStats(ofs);
         decision = PrintReuseStats(ofs);
-        scaPrintDecision = PrintSCAStatsFromfile(scaDecision, ofs);
+        ctsPrintDecision = PrintCTSStatsFromfile(ctsDecision, ofs);
+        PrintSCAStatsFromfile(scaDecision, ofs);
         bestSCAResult minSCAResult(INT_MAX);
         for (int i = 0; i < 100 ; i+=10){
             for (int k = 0; k < 10 ; k+=1){
@@ -335,7 +335,7 @@ DECISION CostSolver::PrintSolution(std::ostream &ofs)
         decision = Debug_HierarchicalDecision(ofs);
     }
 
-    PrintDecision(ofs, decision, scaPrintDecision, false);
+    PrintDecision(ofs, decision, ctsPrintDecision,false);
     ofs << delayCout.str();
 
     return decision;
@@ -418,7 +418,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         std::vector<BBCOUNT> bbcount = bbTimesFromSwitchInfo(decision, _bbl_switch_count);
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
-            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "ctsDecision"
             << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -430,7 +430,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             << std::endl;
         IncorrectCPUDecision << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
-            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "ctsDecision"
             << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -442,7 +442,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
             << std::endl;
         IncorrectPIMDecision << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
-            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "ctsDecision"
             << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -561,7 +561,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         ofs << "top10PIMProfBB" << std::endl;
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
-            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "ctsDecision"
             // << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -601,7 +601,7 @@ std::ostream & CostSolver::PrintDecision(std::ostream &ofs, const DECISION &deci
         ofs << "top10SCABB" << std::endl;
         ofs << std::setw(7) << "BBLID"
             << std::setw(10) << "Decision"
-            << std::setw(12) << "Re-scaDecision"
+            << std::setw(12) << "ctsDecision"
             // << std::setw(12) << "scaDecision"
             << std::setw(14) << "Parallelism"
             << std::setw(14) << "bbCount"
@@ -698,6 +698,39 @@ DECISION CostSolver::PrintMPKIStats(std::ostream &ofs)
     return decision;
 }
 
+DECISION CostSolver::PrintCTSStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
+    const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
+    DECISION decision;
+    for (BBLID i = 0; i < (BBLID)sorted[CPU].size(); ++i) {
+        auto *cpustats = sorted[CPU][i];
+        auto *pimstats = sorted[PIM][i];
+        // deal with the part that is not inside any BBL
+        if (cpustats->bblhash == MAIN_BBLHASH) {         
+            if (cpustats->MaxElapsedTime() <= pimstats->MaxElapsedTime()) {
+                decision.push_back(CPU);
+            }else {
+                decision.push_back(PIM);
+            }
+        }else if(decisionFromFile.count(cpustats->bblhash)){
+            auto tmpdecide = decisionFromFile[cpustats->bblhash];
+            decision.push_back(tmpdecide);
+        }else{
+            decision.push_back(CostSite::CPU);
+        }
+    }
+    COST reuse_cost = ReuseCost(decision, _bbl_data_reuse.getRoot());
+    COST switch_cost = SwitchCost(decision, _bbl_switch_count);
+    auto elapsed_time = ElapsedTime(decision);
+    COST total_time = reuse_cost + switch_cost + elapsed_time.first + elapsed_time.second;
+    assert(total_time == Cost(decision, _bbl_data_reuse.getRoot(), _bbl_switch_count));
+
+    ofs << "CTS offloading time (ns): " << total_time << " = CPU " << elapsed_time.first << " + PIM " << elapsed_time.second << " + REUSE " << reuse_cost << " + SWITCH " << switch_cost << std::endl;
+    // ofs << "SCA configuration: " << " sca_mpki_threshold: " << sca_mpki_threshold \
+    //     << " sca_parallelism_threshold: " << sca_parallelism_threshold \
+    //     << " instr_threshold_percentage: " << instr_threshold_percentage \
+    //     << std::endl;
+    return decision;
+}
 
 DECISION CostSolver::PrintSCAStatsFromfile(DecisionFromFile decisionFromFile, std::ostream &ofs){
     const std::vector<ThreadRunStats *> *sorted = getBBLSortedStats();
@@ -1511,9 +1544,17 @@ void CostSolver::TopReuseBBPairs(DECISION &decision)
             ofs << "Data move Cost: " << std::setw(7) << pair.second << 
                 " id pair : " << bblIndex1 << " <-> "
                 << bblIndex2 << 
-                " sca manual decison: " << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
+                " sca manual decison: " 
+                << getCostSiteString(scaDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
                 << getCostSiteString(scaDecision[sorted[CPU][bblIndex2]->bblhash])
                 << std::endl;
+            ofs << " cts decision "
+                << getCostSiteString(ctsDecision[sorted[CPU][bblIndex1]->bblhash]) << " <-> "
+                << getCostSiteString(ctsDecision[sorted[CPU][bblIndex2]->bblhash]);
+        if(ctsDecision[sorted[CPU][bblIndex1]->bblhash] != ctsDecision[sorted[CPU][bblIndex2]->bblhash]){
+            ofs << " potential";
+        }
+            ofs << std::endl;
         auto *cpustats1 = sorted[CPU][bblIndex1];
         auto *pimstats1 = sorted[PIM][bblIndex1];
         auto *cpustats2 = sorted[CPU][bblIndex2];

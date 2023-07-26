@@ -46,3 +46,4 @@ debug/
 
 # vscode
 .vscode
+.ccls-cache

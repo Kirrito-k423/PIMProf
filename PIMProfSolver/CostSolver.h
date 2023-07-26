@@ -162,6 +162,7 @@ class CostSolver {
 
   private:
     DecisionFromFile scaDecision;
+    DecisionFromFile ctsDecision;
     CommandLineParser *_command_line_parser;
     // Cache line Data Movement between BBLs
     std::map<std::pair<BBLID,BBLID>, COST> interBB_CL_DM;
@@ -213,6 +214,7 @@ class CostSolver {
     }
 
     void ParseDecision(std::istream &ifs);
+    void ParseSCADecision(std::istream &ifs);
     void ParseStats(std::istream &ifs, UUIDHashMap<ThreadRunStats *> &stats);
     void ParseReuse(std::istream &ifs, BBLIDDataReuse &reuse, SwitchCountList &switchcnt);
 
@@ -254,6 +256,7 @@ class CostSolver {
 
     DECISION PrintMPKIStats(std::ostream &ofs);
     DECISION PrintSCAStatsFromfile(DecisionFromFile decision, std::ostream &ofs);
+    DECISION PrintCTSStatsFromfile(DecisionFromFile decision, std::ostream &ofs);
     CostSolver::bestSCAResult PrintSCAStats(int sca_mpki_threshold, int sca_parallelism_threshold, float instr_threshold_percentage);
     DECISION PrintReuseStats(std::ostream &ofs);
     DECISION PrintGreedyStats(std::ostream &ofs);
