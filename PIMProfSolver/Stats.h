@@ -107,6 +107,9 @@ private:
     std::vector<bool> *m_using_pim;
     std::vector<RunStats *> *m_current_bblstats;
 
+    // TSJ: fixed context switch bug
+    RunStats *last_begin_bblstats;
+
     // UUID is the unique identifier of each BBL,
     // and there is a one-to-one correspondence between UUID and RunStats*.
     // All class objects need to be stored in pointer form,
@@ -139,6 +142,8 @@ public:
 
         m_current_bblstats = new std::vector<PIMProf::RunStats *>;
         m_current_bblstats->push_back(globalstats);
+
+        last_begin_bblstats = new RunStats(GLOBAL_BBLID, bblhash);
 
         m_bbl_switch_count = new PtrSwitchCountMatrix();
         m_tag2seg = new std::unordered_map<uint64_t, PtrDataReuseSegment *>;
@@ -207,7 +212,9 @@ public:
         else {
             m_current_bblstats->push_back(it->second);
         }
-        m_bbl_switch_count->insert(prev_back, GetCurrentRunStats());
+
+        m_bbl_switch_count->insert(last_begin_bblstats, GetCurrentRunStats());
+        last_begin_bblstats = GetCurrentRunStats();
     }
 
     void BBLEnd(uint64_t hi, uint64_t lo)
@@ -221,7 +228,6 @@ public:
         }
         assert(bblhash == GetCurrentBBLHash());
         m_current_bblstats->pop_back();
-        m_bbl_switch_count->insert(prev_back, GetCurrentRunStats());
     }
 
     void OffloadStart(uint64_t hi, uint64_t type)
